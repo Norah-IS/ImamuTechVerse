@@ -1,0 +1,718 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { mockEvents, mockRegistrations, Registration } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Building2,
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  Download,
+  Star,
+  Share2,
+  Info,
+  LogOut,
+  Ban,
+  QrCode,
+  ChevronRight,
+} from 'lucide-react';
+import { UniversityLogo } from './UniversityLogo';
+import { EmailConfirmationModal } from './EmailConfirmationModal';
+import { CheckInModal } from './CheckInModal';
+import { CertificateModal } from './CertificateModal';
+import { sendRegistrationConfirmation, sendWaitlistConfirmation, isUserBlocked } from '../services/emailService';
+import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
+
+interface EventDetailsPageProps {
+  adminView?: boolean;
+}
+
+export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, refreshAbsenceCount } = useAuth();
+  const [registrations, setRegistrations] = useState(mockRegistrations);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState('');
+  const [feedbackType, setFeedbackType] = useState<'event' | 'organizer'>('event');
+  const [organizerRating, setOrganizerRating] = useState(0);
+
+  // Email Confirmation Modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalType, setEmailModalType] = useState<'registration' | 'waitlist'>('registration');
+  const [newRegistrationId, setNewRegistrationId] = useState('');
+  const [waitlistPosition, setWaitlistPosition] = useState(1);
+
+  // CheckIn Modal
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+
+  // Certificate Modal
+  const [showCertModal, setShowCertModal] = useState(false);
+
+  const event = mockEvents.find((e) => e.id === id);
+  const myRegistration = registrations.find(
+    (r) => r.eventId === id && r.userId === user?.id
+  );
+
+  const isBlocked = user ? isUserBlocked(user.id) : false;
+  const absenceCount = user ? getAbsenceCount(user.id) : 0;
+
+  if (!event) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-10 h-10 text-muted-foreground" />
+        </div>
+        <h2 className="text-2xl font-bold mb-4 text-foreground">عذراً، الفعالية غير موجودة</h2>
+        <p className="text-muted-foreground mb-8 text-center max-w-sm">يبدو أن الفعالية التي تبحث عنها قد تم إلغاؤها أو إزالة الرابط الخاص بها.</p>
+        <button
+          onClick={() => navigate(adminView ? '/admin' : '/')}
+          className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all flex items-center gap-2"
+        >
+          <ArrowRight className="w-5 h-5" />
+          العودة
+        </button>
+      </div>
+    );
+  }
+
+  const isFull = event.registeredCount >= event.capacity;
+  const isRegistered = myRegistration?.status === 'registered';
+  const isWaitlisted = myRegistration?.status === 'waitlist';
+  const hasAttended = myRegistration?.status === 'attended';
+  const isCancelled = myRegistration?.status === 'cancelled';
+  const isAbsent = myRegistration?.status === 'absent';
+  const checkedIn = myRegistration?.checkedIn || false;
+  const checkedOut = myRegistration?.checkedOut || false;
+
+  const handleRegister = () => {
+    if (isBlocked) {
+      alert('لا يمكنك التسجيل حاليًا. تم حظر حسابك بسبب تجاوز حد الغيابات.');
+      return;
+    }
+    const newId = `r${Date.now()}`;
+    const isWaitlist = isFull;
+    const newRegistration: Registration = {
+      id: newId,
+      userId: user!.id,
+      eventId: event.id,
+      status: isWaitlist ? 'waitlist' : 'registered',
+      checkedIn: false,
+      checkedOut: false,
+      feedbackSubmitted: false,
+      certificateIssued: false,
+    };
+    setRegistrations([...registrations, newRegistration]);
+
+    if (isWaitlist) {
+      const wPos = event.waitlistCount + 1;
+      setWaitlistPosition(wPos);
+      sendWaitlistConfirmation({
+        recipientName: user!.name,
+        recipientEmail: user!.email,
+        eventTitle: event.title,
+        eventDate: event.date,
+        waitlistPosition: wPos,
+      });
+      setEmailModalType('waitlist');
+    } else {
+      sendRegistrationConfirmation({
+        recipientName: user!.name,
+        recipientEmail: user!.email,
+        eventTitle: event.title,
+        eventDate: event.date,
+        eventTime: event.time,
+        eventLocation: event.location,
+        registrationId: newId,
+      });
+      setEmailModalType('registration');
+    }
+    setNewRegistrationId(newId);
+    setShowEmailModal(true);
+  };
+
+  const handleCancelRegistration = () => {
+    if (confirm('هل أنت متأكد من رغبتك في إلغاء التسجيل في هذه الفعالية؟')) {
+      setRegistrations(
+        registrations.map((r) =>
+          r.id === myRegistration?.id ? { ...r, status: 'cancelled' as const } : r
+        )
+      );
+    }
+  };
+
+  // Called when CheckInModal reports success
+  const handleCheckInSuccess = () => {
+    setRegistrations(
+      registrations.map((r) =>
+        r.id === myRegistration?.id
+          ? { ...r, checkedIn: true, status: 'attended' as const }
+          : r
+      )
+    );
+  };
+
+  // Called when user accepts being marked absent (Req 27)
+  const handleAcceptAbsent = () => {
+    setRegistrations(
+      registrations.map((r) =>
+        r.id === myRegistration?.id
+          ? { ...r, status: 'absent' as const }
+          : r
+      )
+    );
+    // Record absence with auto-block + notifications (Req 40-41)
+    if (user) {
+      const { wasBlocked } = recordAbsenceWithNotification(user.id, {
+        studentName: user.name,
+        studentEmail: user.email,
+        studentId: user.studentId,
+        eventTitle: event.title,
+      });
+      refreshAbsenceCount?.();
+      if (wasBlocked) {
+        // The block notification is already sent inside recordAbsenceWithNotification
+        setTimeout(() => {
+          alert(`⚠️ تنبيه مهم\n\nلقد وصلت إلى الحد الأقصى من الغيابات (3 غيابات).\nتم تعليق حسابك مؤقتاً لمدة شهر كامل.\n\nللاستفسار، تواصل مع إدارة شؤون الطلاب.\n\nتم إرسال إشعار تفصيلي إلى بريدك: ${user.email}`);
+        }, 300);
+      }
+    }
+  };
+
+  // Checkout: show feedback modal (Req 28, 31)
+  const handleCheckOut = () => {
+    if (!checkedIn) {
+      alert('يجب إتمام تسجيل الحضور أولاً قبل تسجيل المغادرة.');
+      return;
+    }
+    setShowFeedbackModal(true);
+  };
+
+  const handleSubmitFeedback = () => {
+    if (rating === 0) {
+      alert('يرجى اختيار تقييم من 1 إلى 5 نجوم');
+      return;
+    }
+    setRegistrations(
+      registrations.map((r) =>
+        r.id === myRegistration?.id
+          ? { ...r, feedbackSubmitted: true, certificateIssued: true, checkedOut: true }
+          : r
+      )
+    );
+    setShowFeedbackModal(false);
+    setRating(0);
+    setOrganizerRating(0);
+    setFeedback('');
+  };
+
+  const statusBadge = () => {
+    if (event.status === 'cancelled') return <span className="px-4 py-1.5 bg-destructive/80 text-white rounded-xl text-sm font-bold">ملغاة</span>;
+    if (event.status === 'completed') return <span className="px-4 py-1.5 bg-muted text-muted-foreground rounded-xl text-sm font-bold">منتهية</span>;
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen bg-background font-sans flex flex-col">
+      <header className="bg-primary border-b-4 border-secondary sticky top-0 z-20 shadow-xl shadow-primary/10">
+        <div className="max-w-4xl mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate(adminView ? '/admin' : '/')}
+              className="flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur transition-all"
+              title="رجوع"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3">
+              <h1 className="text-white text-base md:text-lg font-bold leading-tight hidden sm:block">
+                {adminView ? 'تفاصيل الفعالية (إداري)' : 'تفاصيل الفعالية'}
+              </h1>
+              <div className="bg-white rounded-xl p-1.5 shadow-inner">
+                <UniversityLogo size={30} variant="icon" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-4xl mx-auto px-4 py-8 w-full">
+        <div className="bg-card rounded-3xl border border-border overflow-hidden shadow-xl shadow-primary/5">
+          <div className="relative h-64 md:h-96 w-full">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
+            <img
+              src={event.image}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute top-4 left-4 z-20 flex gap-2">
+              <button className="w-10 h-10 bg-white/20 backdrop-blur border border-white/30 text-white rounded-xl flex items-center justify-center hover:bg-white hover:text-primary transition-colors shadow-sm">
+                <Share2 className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="absolute bottom-6 right-6 left-6 z-20">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="px-4 py-1.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg border border-white/20 backdrop-blur">
+                  {event.category}
+                </span>
+                {statusBadge()}
+                {isRegistered && (
+                  <span className="px-4 py-1.5 bg-secondary text-white rounded-xl text-sm font-bold shadow-lg border border-white/20 flex items-center gap-2 backdrop-blur">
+                    <CheckCircle className="w-4 h-4" />
+                    مسجل
+                  </span>
+                )}
+                {isWaitlisted && (
+                  <span className="px-4 py-1.5 bg-orange-500 text-white rounded-xl text-sm font-bold shadow-lg border border-white/20 flex items-center gap-2 backdrop-blur">
+                    <AlertCircle className="w-4 h-4" />
+                    في الانتظار
+                  </span>
+                )}
+                {hasAttended && (
+                  <span className="px-4 py-1.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg border border-white/20 flex items-center gap-2 backdrop-blur">
+                    <CheckCircle className="w-4 h-4" />
+                    حضر
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight drop-shadow-md">{event.title}</h1>
+              <p className="text-white/90 text-sm font-medium flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-secondary" />
+                تنظيم: {event.organizer}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 md:p-10">
+            <div className="flex flex-col lg:flex-row gap-10">
+              <div className="flex-1 space-y-8">
+                <section>
+                  <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-foreground">
+                    <span className="w-2 h-6 bg-secondary rounded-full"></span>
+                    نبذة عن الفعالية
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed text-base">
+                    {event.description}
+                  </p>
+                </section>
+
+                <section className="bg-muted/30 p-6 rounded-3xl border border-border/50">
+                  <h3 className="text-lg font-bold mb-6 text-foreground flex items-center gap-2">
+                    <Info className="w-5 h-5 text-primary" />
+                    تفاصيل الفعالية
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-border/50 shrink-0">
+                        <Calendar className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">التاريخ</p>
+                        <p className="font-bold text-foreground">{event.date}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-border/50 shrink-0">
+                        <Clock className="w-6 h-6 text-secondary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">الوقت</p>
+                        <p className="font-bold text-foreground">{event.time}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4 sm:col-span-2">
+                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-border/50 shrink-0">
+                        <MapPin className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">الموقع / القاعة</p>
+                        <p className="font-bold text-foreground">{event.location}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4 sm:col-span-2">
+                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-border/50 shrink-0">
+                        <Building2 className="w-6 h-6 text-secondary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">الكلية / الجهة المنظمة</p>
+                        <p className="font-bold text-foreground">{event.college} — {event.organizer}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Absence warning */}
+                {!adminView && absenceCount > 0 && (
+                  <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
+                    absenceCount >= 3
+                      ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                      : 'bg-orange-50 border-orange-200 text-orange-700'
+                  }`}>
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <div>
+                      <p className="font-bold text-sm">
+                        {absenceCount >= 3
+                          ? 'تم حظر حسابك: تجاوزت الحد المسموح به من الغيابات'
+                          : `تحذير: لديك ${absenceCount} غياب(ات). عند الوصول إلى 3 غيابات سيتم تعليق حسابك.`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar */}
+              <div className="lg:w-80 space-y-6">
+                <div className="bg-card border-2 border-border rounded-3xl p-6 shadow-md hover:border-primary/50 transition-colors">
+                  <h4 className="text-sm font-bold text-muted-foreground mb-4">حالة التسجيل والمشاركة</h4>
+                  
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-2xl text-foreground">{event.registeredCount}</span>
+                    <span className="text-sm font-medium text-muted-foreground">من {event.capacity} مقعد</span>
+                  </div>
+                  
+                  <div className="w-full bg-muted rounded-full h-3 mb-6 overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-1000 ${isFull ? 'bg-destructive' : 'bg-primary'}`} 
+                      style={{ width: `${Math.min(100, (event.registeredCount / event.capacity) * 100)}%` }}
+                    ></div>
+                  </div>
+                  
+                  {/* قائمة الانتظار — تظهر فقط إذا امتلأت المقاعد الأساسية */}
+                  {isFull && event.waitlistCount > 0 && (
+                    <div className="flex items-center justify-between text-sm font-medium text-orange-600 bg-orange-50 px-4 py-2 rounded-xl mb-6 border border-orange-100">
+                      <span className="flex items-center gap-2"><AlertCircle className="w-4 h-4" /> قائمة الانتظار</span>
+                      <span>{event.waitlistCount} طالب</span>
+                    </div>
+                  )}
+
+                  {/* Blocked User Message */}
+                  {!adminView && isBlocked && (
+                    <div className="w-full py-3.5 bg-destructive/10 border-2 border-destructive/30 text-destructive font-bold rounded-xl flex items-center justify-center gap-2 text-sm mb-3">
+                      <Ban className="w-5 h-5" />
+                      حسابك محظور مؤقتاً - لا يمكن التسجيل
+                    </div>
+                  )}
+
+                  <div className="space-y-3 pt-4 border-t border-border">
+                    {/* Register / Waitlist button */}
+                    {!adminView && !myRegistration && event.status === 'upcoming' && !isBlocked && (
+                      <button
+                        onClick={handleRegister}
+                        className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 ${
+                          isFull
+                            ? 'bg-secondary text-white hover:bg-secondary/90 shadow-secondary/20'
+                            : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
+                        }`}
+                      >
+                        {isFull ? 'الانضمام للانتظار' : 'التسجيل الآن'}
+                      </button>
+                    )}
+
+                    {/* ── مسجّل ولم يحضر بعد ── */}
+                    {!adminView && isRegistered && event.status === 'upcoming' && !checkedIn && (
+                      <>
+                        <button
+                          onClick={handleCancelRegistration}
+                          className="w-full py-3.5 bg-white border-2 border-border text-destructive font-bold rounded-xl hover:bg-destructive/5 hover:border-destructive/30 transition-all text-sm"
+                        >
+                          إلغاء التسجيل
+                        </button>
+
+                        <button
+                          onClick={() => setShowCheckInModal(true)}
+                          className="w-full py-3.5 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-md flex items-center justify-center gap-2"
+                        >
+                          <QrCode className="w-5 h-5" />
+                          مسح رمز QR للحضور
+                        </button>
+                      </>
+                    )}
+
+                    {/* ── سجّل حضوره ولم يغادر بعد ── يظهر بغض النظر عن حالة التسجيل ── */}
+                    {!adminView && checkedIn && !checkedOut && (
+                      <div className="space-y-3">
+                        <div className="w-full py-3 px-4 bg-green-50 border-2 border-green-200 text-green-700 rounded-2xl flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">تم تأكيد حضورك ✓</p>
+                            <p className="text-xs text-green-600/80">لا تنسَ تسجيل المغادرة عند انتهاء الفعالية</p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handleCheckOut}
+                          className="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group"
+                        >
+                          <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                          تسجيل المغادرة
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── غادر وقيّم ── */}
+                    {!adminView && checkedOut && myRegistration?.feedbackSubmitted && (
+                      <div className="w-full py-3 bg-green-50 border-2 border-green-200 text-green-700 font-bold rounded-xl flex items-center justify-center gap-2 text-sm">
+                        <CheckCircle className="w-5 h-5" />
+                        تم تسجيل المغادرة والتقييم
+                      </div>
+                    )}
+
+                    {/* Download certificate */}
+                    {!adminView && myRegistration?.certificateIssued && (
+                      <button
+                        onClick={() => setShowCertModal(true)}
+                        className="w-full py-3.5 bg-white border-2 border-secondary text-secondary font-bold rounded-xl hover:bg-secondary/10 transition-all flex items-center justify-center gap-2 group"
+                      >
+                        <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
+                        تحميل شهادة الحضور (PDF)
+                      </button>
+                    )}
+
+                    {/* Feedback required but not submitted (lock certificate) */}
+                    {!adminView && hasAttended && myRegistration?.checkedOut && !myRegistration?.feedbackSubmitted && (
+                      <div className="w-full py-3 bg-muted border-2 border-border text-muted-foreground font-bold rounded-xl flex items-center justify-center gap-2 text-sm">
+                        <AlertCircle className="w-5 h-5" />
+                        التقييم مطلوب لإصدار الشهادة
+                      </div>
+                    )}
+
+                    {/* Waitlist actions */}
+                    {!adminView && isWaitlisted && (
+                      <button
+                        onClick={handleCancelRegistration}
+                        className="w-full py-3.5 bg-white border-2 border-border text-muted-foreground font-bold rounded-xl hover:bg-muted transition-all text-sm"
+                      >
+                        الخروج من قائمة الانتظار
+                      </button>
+                    )}
+
+                    {/* Absent status */}
+                    {!adminView && isAbsent && (
+                      <div className="w-full py-3 bg-destructive/10 border-2 border-destructive/30 text-destructive font-bold rounded-xl flex items-center justify-center gap-2 text-sm">
+                        <AlertCircle className="w-5 h-5" />
+                        تم تسجيلك كـ "غائب"
+                      </div>
+                    )}
+
+                    {/* Admin: view attendance */}
+                    {adminView && (
+                      <button
+                        onClick={() => navigate('/admin')}
+                        className="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                        إدارة الفعالية
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Attendance stats (always visible) */}
+                <div className="bg-muted/40 border border-border rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-bold text-foreground">إحصائيات الحضور</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">المسجلون</span>
+                      <span className="font-bold text-foreground">{event.registeredCount}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">الطاقة الاستيعابية</span>
+                      <span className="font-bold text-foreground">{event.capacity}</span>
+                    </div>
+                    {/* قائمة الانتظار في البانل الجانبي — فقط عند امتلاء المقاعد */}
+                    {isFull && event.waitlistCount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-orange-600">قائمة الانتظار</span>
+                        <span className="font-bold text-orange-600">{event.waitlistCount}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">المقاعد المتبقية</span>
+                      <span className={`font-bold ${isFull ? 'text-destructive' : 'text-green-600'}`}>
+                        {isFull ? 'مكتمل' : event.capacity - event.registeredCount}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Feedback / Checkout Modal (Req 31-34) */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-card rounded-3xl p-0 w-full max-w-md overflow-hidden shadow-2xl border border-border flex flex-col max-h-[90vh]">
+            <div className="p-8 pb-6 flex flex-col items-center text-center bg-gradient-to-br from-primary to-secondary text-white">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
+                <Star className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-1">استبيان التقييم</h3>
+              <p className="text-white/80 text-sm">تقييمك إلزامي للحصول على شهادة الحضور (المتطلب 31)</p>
+            </div>
+
+            <div className="px-8 py-6 overflow-y-auto flex-1">
+              {/* Tab selector */}
+              <div className="flex p-1 bg-muted rounded-xl mb-6">
+                <button
+                  onClick={() => setFeedbackType('event')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${feedbackType === 'event' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
+                >
+                  تقييم الفعالية
+                </button>
+                <button
+                  onClick={() => setFeedbackType('organizer')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${feedbackType === 'organizer' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
+                >
+                  تقييم المنظمين
+                </button>
+              </div>
+
+              {feedbackType === 'event' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col items-center">
+                    <label className="block mb-3 font-bold text-sm text-center">تقييم الفعالية الإجمالي</label>
+                    <div className="flex gap-2 justify-center" dir="ltr">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setRating(star)}
+                          className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                        >
+                          <Star
+                            className={`w-10 h-10 ${
+                              star <= rating
+                                ? 'fill-secondary text-secondary drop-shadow-md'
+                                : 'text-muted/50 fill-muted'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    {rating > 0 && (
+                      <p className="text-sm font-bold text-secondary mt-2">
+                        {['', 'ضعي��', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'][rating]}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 font-bold text-sm">ملاحظاتك ومقترحاتك</label>
+                    <textarea
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      className="w-full px-4 py-3 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
+                      rows={3}
+                      placeholder="شاركنا رأيك بصدق وشفافية..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {feedbackType === 'organizer' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col items-center">
+                    <label className="block mb-3 font-bold text-sm text-center">تقييم أداء المنظمين</label>
+                    <div className="flex gap-2 justify-center" dir="ltr">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setOrganizerRating(star)}
+                          className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                        >
+                          <Star
+                            className={`w-10 h-10 ${
+                              star <= organizerRating
+                                ? 'fill-primary text-primary drop-shadow-md'
+                                : 'text-muted/50 fill-muted'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    {organizerRating > 0 && (
+                      <p className="text-sm font-bold text-primary mt-2">
+                        {['', 'ضعيف', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'][organizerRating]}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center bg-muted/50 p-3 rounded-xl">
+                    تقييم المنظمين اختياري. يمكنك الإرسال من تبويب "تقييم الفعالية".
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-8 pb-8 flex gap-3">
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="flex-1 py-3.5 bg-white border-2 border-border text-foreground font-bold rounded-xl hover:bg-muted transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSubmitFeedback}
+                disabled={rating === 0}
+                className="flex-1 py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20 disabled:opacity-50"
+              >
+                إرسال التقييم
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Confirmation Modal */}
+      <EmailConfirmationModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        type={emailModalType}
+        recipientEmail={user?.email || ''}
+        recipientName={user?.name || ''}
+        eventTitle={event.title}
+        eventDate={event.date}
+        eventTime={event.time}
+        eventLocation={event.location}
+        registrationId={emailModalType === 'registration' ? newRegistrationId : undefined}
+        waitlistPosition={emailModalType === 'waitlist' ? waitlistPosition : undefined}
+      />
+
+      {/* CheckIn Modal (Req 24-27) */}
+      <CheckInModal
+        isOpen={showCheckInModal}
+        onClose={() => setShowCheckInModal(false)}
+        onSuccess={handleCheckInSuccess}
+        onAcceptAbsent={handleAcceptAbsent}
+        eventTitle={event.title}
+        eventLocation={event.location}
+      />
+
+      {/* Certificate Modal (Req 35) */}
+      {user && (
+        <CertificateModal
+          isOpen={showCertModal}
+          onClose={() => setShowCertModal(false)}
+          studentName={user.name}
+          eventTitle={event.title}
+          eventDate={event.date}
+          studentId={user.studentId}
+        />
+      )}
+    </div>
+  );
+}

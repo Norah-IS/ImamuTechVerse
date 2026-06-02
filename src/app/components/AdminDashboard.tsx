@@ -1,0 +1,1564 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { mockEvents, mockRegistrations, mockAttendanceData, Event, colleges, interests } from '../data/mockData';
+import {
+  Calendar,
+  Users,
+  TrendingUp,
+  Plus,
+  Edit,
+  FileText,
+  Award,
+  LogOut,
+  Bell,
+  BarChart3,
+  ChevronLeft,
+  Search,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Mail,
+  UserX,
+  RefreshCw,
+  Trash2,
+  ShieldAlert,
+  Clock,
+  Send,
+  BadgeCheck,
+  Eye,
+  X,
+  MapPin,
+  Building2,
+  ListChecks,
+  Download,
+} from 'lucide-react';
+import { UniversityLogo } from './UniversityLogo';
+import {
+  getEmailLogs,
+  EmailLog,
+  getBlockedUsers,
+  BlockedUser,
+  clearEmailLogs,
+  sendWaitlistPromotion,
+  sendCertificateEmail,
+} from '../services/emailService';
+import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
+import { CertificateModal } from './CertificateModal';
+
+// ─── Local event storage (CRUD) ───────────────────────────────────────────────
+const EVENTS_STORAGE_KEY = 'imamu_events';
+
+function getStoredEvents(): Event[] {
+  try {
+    const stored = localStorage.getItem(EVENTS_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return mockEvents;
+}
+
+function saveEvents(events: Event[]) {
+  localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+}
+
+// ─── Mock students for User Control ───────────────────────────────────────────
+const MOCK_STUDENTS = [
+  { id: '1', name: 'أحمد محمد العلي', email: 'ahmed.ali@imamu.edu.sa', studentId: '2024001', college: 'كلية علوم الحاسب' },
+  { id: '2', name: 'سارة خالد المطيري', email: 'sara.m@imamu.edu.sa', studentId: '2024002', college: 'كلية الهندسة' },
+  { id: '3', name: 'محمد عبدالله القحطاني', email: 'm.qhtani@imamu.edu.sa', studentId: '2024003', college: 'كلية إدارة الأعمال' },
+  { id: '4', name: 'فاطمة أحمد العمري', email: 'f.omari@imamu.edu.sa', studentId: '2024004', college: 'كلية الطب' },
+  { id: '5', name: 'عمر سعد الزهراني', email: 'o.zahrani@imamu.edu.sa', studentId: '2024005', college: 'كلية العلوم' },
+  { id: '6', name: 'نوف محمد الحربي', email: 'n.harbi@imamu.edu.sa', studentId: '2024006', college: 'كلية الآداب' },
+  { id: '7', name: 'يوسف إبراهيم الشمري', email: 'y.shimri@imamu.edu.sa', studentId: '2024007', college: 'كلية الهندسة' },
+  { id: '8', name: 'ريم سلطان العنزي', email: 'r.anazi@imamu.edu.sa', studentId: '2024008', college: 'كلية العلوم' },
+];
+
+// ─── Blank event template ─────────────────────────────────────────────────────
+const blankEvent = (): Omit<Event, 'id'> => ({
+  title: '',
+  description: '',
+  date: '',
+  time: '',
+  location: '',
+  category: 'تقني',
+  capacity: 50,
+  registeredCount: 0,
+  waitlistCount: 0,
+  image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
+  organizer: '',
+  college: 'جميع الكليات',
+  status: 'upcoming',
+  requiresFeedback: true,
+});
+
+// ─── Email helpers ─────────────────────────────────────────────────────────────
+function getEmailTypeLabel(type: EmailLog['type']): string {
+  const labels: Record<string, string> = {
+    registration_confirmation: 'تأكيد التسجيل',
+    waitlist_notification: 'قائمة الانتظار',
+    waitlist_promotion: 'ترقية الانتظار',
+    reminder: 'تذكير',
+    certificate: 'شهادة',
+    block_notification: 'إشعار حظر',
+    absence_warning: 'تحذير غياب',
+  };
+  return labels[type] || type;
+}
+function getEmailTypeStyle(type: EmailLog['type']): string {
+  const styles: Record<string, string> = {
+    registration_confirmation: 'bg-primary/10 text-primary border-primary/20',
+    waitlist_notification: 'bg-orange-50 text-orange-600 border-orange-200',
+    waitlist_promotion: 'bg-green-50 text-green-600 border-green-200',
+    reminder: 'bg-blue-50 text-blue-600 border-blue-200',
+    certificate: 'bg-secondary/10 text-secondary border-secondary/20',
+    block_notification: 'bg-destructive/10 text-destructive border-destructive/20',
+    absence_warning: 'bg-orange-50 text-orange-700 border-orange-300',
+  };
+  return styles[type] || 'bg-muted text-muted-foreground border-border';
+}
+function getEmailTypeIcon(type: EmailLog['type']) {
+  const icons: Record<string, React.ReactNode> = {
+    registration_confirmation: <BadgeCheck className="w-4 h-4" />,
+    waitlist_notification: <Clock className="w-4 h-4" />,
+    waitlist_promotion: <TrendingUp className="w-4 h-4" />,
+    reminder: <Bell className="w-4 h-4" />,
+    certificate: <Award className="w-4 h-4" />,
+    block_notification: <ShieldAlert className="w-4 h-4" />,
+    absence_warning: <AlertTriangle className="w-4 h-4" />,
+  };
+  return icons[type] || <Mail className="w-4 h-4" />;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export function AdminDashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'attendance' | 'reports' | 'notifications' | 'users'>('overview');
+
+  // Events CRUD state
+  const [events, setEvents] = useState<Event[]>(getStoredEvents());
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [eventForm, setEventForm] = useState<Omit<Event, 'id'>>(blankEvent());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [eventSearch, setEventSearch] = useState('');
+
+  // Attendance tab
+  const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<string>('');
+  const [attendanceData, setAttendanceData] = useState(mockAttendanceData);
+  const [certApprovals, setCertApprovals] = useState<Record<string, boolean>>({}); // registrationId → approved
+
+  // Certificate issuance from attendance tab
+  const [issuedCertsMap, setIssuedCertsMap] = useState<Record<string, boolean>>({
+    r6: true, // pre-issued for سارة in event 4
+  });
+  const [adminCertModal, setAdminCertModal] = useState<{
+    studentName: string;
+    studentId: string;
+    eventTitle: string;
+    eventDate: string;
+    studentEmail: string;
+  } | null>(null);
+
+  // Notification Center
+  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  const [emailFilter, setEmailFilter] = useState<string>('all');
+
+  // User Monitoring — read-only, blocking is system-only (Req 40-41)
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+
+  useEffect(() => {
+    if (user?.role !== 'admin') navigate('/');
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (activeTab === 'notifications') setEmailLogs(getEmailLogs());
+    if (activeTab === 'users') setBlockedUsers(getBlockedUsers());
+    if (activeTab === 'attendance' && !selectedEventForAttendance && events.length > 0) {
+      setSelectedEventForAttendance(events[0].id);
+    }
+  }, [activeTab]);
+
+  if (user?.role !== 'admin') return null;
+
+  const totalEvents = events.length;
+  const upcomingEvents = events.filter((e) => e.status === 'upcoming').length;
+  const totalRegistrations = mockRegistrations.length;
+  const totalAttendees = mockRegistrations.filter((r) => r.status === 'attended').length;
+
+  const handleLogout = () => { logout(); navigate('/login'); };
+
+  // ─── Event CRUD ──────────────────────────────────────────────────────────────
+  const openCreateModal = () => {
+    setEventForm(blankEvent());
+    setEditingEvent(null);
+    setShowCreateModal(true);
+  };
+
+  const openEditModal = (event: Event) => {
+    setEditingEvent(event);
+    setEventForm({
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      category: event.category,
+      capacity: event.capacity,
+      registeredCount: event.registeredCount,
+      waitlistCount: event.waitlistCount,
+      image: event.image,
+      organizer: event.organizer,
+      college: event.college,
+      status: event.status,
+      requiresFeedback: event.requiresFeedback,
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleSaveEvent = () => {
+    if (!eventForm.title || !eventForm.date || !eventForm.location) {
+      alert('يرجى ملء الحقول الإلزامية: اسم الفعالية، التاريخ، والموقع.');
+      return;
+    }
+    let updated: Event[];
+    if (editingEvent) {
+      updated = events.map(e => e.id === editingEvent.id ? { ...eventForm, id: editingEvent.id } : e);
+    } else {
+      const newEvent: Event = { ...eventForm, id: `evt_${Date.now()}` };
+      updated = [newEvent, ...events];
+    }
+    setEvents(updated);
+    saveEvents(updated);
+    setShowCreateModal(false);
+    setEditingEvent(null);
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    const updated = events.filter(e => e.id !== id);
+    setEvents(updated);
+    saveEvents(updated);
+    setShowDeleteConfirm(null);
+  };
+
+  // ─── Waitlist notification ────────────────────────────────────────────────────
+  const handleNotifyWaitlist = (event: Event) => {
+    sendWaitlistPromotion({
+      recipientName: 'الطالب المنتظر',
+      recipientEmail: 'waitlist@university.edu.sa',
+      eventTitle: event.title,
+      eventDate: event.date,
+      eventTime: event.time,
+      eventLocation: event.location,
+    });
+    setEmailLogs(getEmailLogs());
+    alert(`تم إرسال ${event.waitlistCount} إشعار لمتقدمي قائمة الانتظار في فعالية "${event.title}"`);
+  };
+
+  // ─── Attendance data ──────────────────────────────────────────────────────────
+  const getAttendanceForEvent = (eventId: string) => {
+    return attendanceData.filter(a => a.eventId === eventId);
+  };
+
+  // Mark a student absent manually (Req 36-37, 40-41)
+  const handleMarkAbsent = (entry: typeof mockAttendanceData[0]) => {
+    if (entry.checkedIn) {
+      alert('هذا الطالب قد حضر بالفعل، لا يمكن تسجيله غائباً.');
+      return;
+    }
+    const updated = attendanceData.map(a =>
+      a.registrationId === entry.registrationId ? { ...a, status: 'absent' as const } : a
+    );
+    setAttendanceData(updated);
+
+    // Record absence with full notification + possible auto-block
+    const { wasBlocked } = recordAbsenceWithNotification(entry.userId, {
+      studentName: entry.studentName,
+      studentEmail: `${entry.studentId}@imamu.edu.sa`,
+      studentId: entry.studentId,
+      eventTitle: events.find(e => e.id === entry.eventId)?.title || '',
+    });
+
+    setEmailLogs(getEmailLogs());
+    setBlockedUsers(getBlockedUsers());
+
+    if (wasBlocked) {
+      alert(`⚠️ تم حظر الطالب "${entry.studentName}" تلقائياً لمدة شهر بسبب تجاوز حد الغيابات (3 غيابات). تم إرسال إشعار تفصيلي للطالب.`);
+    } else {
+      const count = getAbsenceCount(entry.userId);
+      alert(`تم تسجيل الطالب "${entry.studentName}" غائباً. إجمالي غياباته: ${count}/3. تم إرسال تحذير بريدي.`);
+    }
+  };
+
+  // Approve certificate for a student (Req 37)
+  const handleApproveCertificate = (regId: string) => {
+    setCertApprovals(prev => ({ ...prev, [regId]: true }));
+    alert('تم الموافقة على إصدار الشهادة. سيتمكن الطالب الآن من تحميل شهادته.');
+  };
+
+  // Issue certificate directly from attendance tab
+  const handleIssueCertificate = (entry: typeof mockAttendanceData[0]) => {
+    const event = events.find(e => e.id === entry.eventId);
+    if (!event) return;
+    const studentEmail = `${entry.studentId}@imamu.edu.sa`;
+
+    // Send certificate email
+    sendCertificateEmail({
+      recipientName: entry.studentName,
+      recipientEmail: studentEmail,
+      eventTitle: event.title,
+      eventDate: event.date,
+    });
+
+    // Mark as issued
+    setIssuedCertsMap(prev => ({ ...prev, [entry.registrationId]: true }));
+    setEmailLogs(getEmailLogs());
+
+    // Open preview modal
+    setAdminCertModal({
+      studentName: entry.studentName,
+      studentId: entry.studentId,
+      eventTitle: event.title,
+      eventDate: event.date,
+      studentEmail,
+    });
+  };
+
+  // ─── User control ─────────────────────────────────────────────────────────────
+  const filteredStudents = MOCK_STUDENTS.filter(
+    (s) =>
+      s.name.includes(userSearch) ||
+      s.studentId.includes(userSearch) ||
+      s.email.includes(userSearch)
+  );
+
+  const filteredLogs =
+    emailFilter === 'all'
+      ? emailLogs
+      : emailLogs.filter((l) => l.type === emailFilter);
+
+  const filteredEvents = events.filter(
+    e => e.title.includes(eventSearch) || e.category.includes(eventSearch) || e.organizer.includes(eventSearch)
+  );
+
+  // ─── Generate Report ──────────────────────────────────────────────────────────
+  const handleGenerateReport = () => {
+    const reportData = events.map(event => {
+      const eventRegs = mockRegistrations.filter(r => r.eventId === event.id);
+      const attendedCount = eventRegs.filter(r => r.status === 'attended').length;
+      const feedbackCount = eventRegs.filter(r => r.feedbackSubmitted).length;
+      return {
+        eventId: event.id,
+        title: event.title,
+        date: event.date,
+        registered: event.registeredCount,
+        capacity: event.capacity,
+        attended: attendedCount,
+        feedback: feedbackCount,
+        attendanceRate: event.registeredCount > 0 ? Math.round((attendedCount / event.registeredCount) * 100) : 0,
+      };
+    });
+    console.log('Report generated:', reportData);
+    alert(`تم توليد التقرير بنجاح!\n\nملخص:\n- إجمالي الفعاليات: ${totalEvents}\n- إجمالي التسجيلات: ${totalRegistrations}\n- إجمالي الحضور: ${totalAttendees}\n- معدل الحضور: ${totalRegistrations > 0 ? Math.round((totalAttendees / totalRegistrations) * 100) : 0}%`);
+  };
+
+  return (
+    <div className="min-h-screen bg-background font-sans flex flex-col">
+      {/* ─── Header ─── */}
+      <header className="bg-[#13193E] border-b-4 border-secondary sticky top-0 z-20 shadow-xl shadow-primary/5">
+        <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white rounded-xl p-1.5 shadow-inner relative">
+                <UniversityLogo size={36} variant="icon" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-secondary rounded-full border-2 border-[#13193E]"></div>
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-white text-lg font-bold leading-tight">بوابة الإدارة | Imamu TechVerse</h1>
+                <p className="text-xs font-semibold" style={{ color: '#00ADEF' }}>جامعة الإمام محمد بن سعود الإسلامية</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/20">
+                <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">م</span>
+                </div>
+                <div className="hidden sm:block text-right">
+                  <p className="text-sm font-bold text-white leading-none">{user?.name}</p>
+                  <p className="text-xs text-white/70 mt-1">مدير النظام</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-10 h-10 flex items-center justify-center hover:bg-destructive/20 text-white hover:text-destructive rounded-xl transition-all"
+                title="تسجيل الخروج"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 flex flex-col">
+        {/* ─── Navigation Tabs ─── */}
+        <div className="bg-card rounded-2xl shadow-sm border border-border p-2 mb-8 flex overflow-x-auto gap-1">
+          {[
+            { id: 'overview', icon: BarChart3, label: 'لوحة القيادة' },
+            { id: 'events', icon: Calendar, label: 'إدارة الفعاليات' },
+            { id: 'attendance', icon: ListChecks, label: 'الحضور والغياب' },
+            { id: 'reports', icon: FileText, label: 'التقارير' },
+            { id: 'notifications', icon: Bell, label: 'مركز الإشعارات', badge: emailLogs.length },
+            { id: 'users', icon: UserX, label: 'متابعة الطلاب', badge: blockedUsers.length > 0 ? blockedUsers.length : undefined },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`relative flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {tab.badge !== undefined && tab.badge > 0 && (
+                <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${
+                  activeTab === tab.id ? 'bg-white text-primary' : 'bg-secondary text-white'
+                }`}>
+                  {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ─── Overview Tab ─── */}
+        {activeTab === 'overview' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { label: 'إجمالي الفعاليات', value: totalEvents, icon: Calendar, color: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-50' },
+                { label: 'الفعاليات القادمة', value: upcomingEvents, icon: TrendingUp, color: 'bg-secondary', text: 'text-secondary', bg: 'bg-secondary/10' },
+                { label: 'إجمالي التسجيلات', value: totalRegistrations, icon: Users, color: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
+                { label: 'إجمالي الحضور', value: totalAttendees, icon: CheckCircle2, color: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-50' },
+              ].map((stat, i) => (
+                <div key={i} className="bg-card border-2 border-border rounded-2xl p-6 relative overflow-hidden group hover:border-border/80 transition-all hover:shadow-lg">
+                  <div className={`absolute top-0 right-0 w-2 h-full ${stat.color}`}></div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-muted-foreground mb-1">{stat.label}</p>
+                      <h3 className="text-4xl font-black text-foreground">{stat.value}</h3>
+                    </div>
+                    <div className={`w-14 h-14 ${stat.bg} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                      <stat.icon className={`w-7 h-7 ${stat.text}`} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <span className="w-2 h-6 bg-secondary rounded-full"></span>
+                    أحدث الفعاليات
+                  </h3>
+                  <button onClick={() => setActiveTab('events')} className="text-sm font-bold text-primary hover:text-secondary transition-colors">
+                    عرض الكل
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {events.slice(0, 4).map((event) => (
+                    <div key={event.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-2xl border border-transparent hover:border-border hover:bg-card transition-all gap-4">
+                      <div className="flex items-center gap-4">
+                        <img src={event.image} alt="" className="w-16 h-16 rounded-xl object-cover shadow-sm hidden sm:block" />
+                        <div>
+                          <h4 className="font-bold text-foreground mb-1 line-clamp-1">{event.title}</h4>
+                          <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                            <Calendar className="w-3 h-3" /> {event.date}
+                            <span className="w-1 h-1 bg-border rounded-full"></span>
+                            <Users className="w-3 h-3" /> {event.registeredCount} مسجل
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 text-xs font-bold rounded-lg ${event.status === 'upcoming' ? 'bg-primary/10 text-primary' : event.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                          {event.status === 'upcoming' ? 'قادمة' : event.status === 'cancelled' ? 'ملغاة' : 'مكتملة'}
+                        </span>
+                        <button
+                          onClick={() => navigate(`/admin/event/${event.id}`)}
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-border rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-primary rounded-3xl p-6 md:p-8 shadow-lg text-white relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-2xl" style={{ backgroundColor: 'rgba(0,173,239,0.15)' }}></div>
+                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-black/20 rounded-full blur-2xl"></div>
+                <div className="relative z-10">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl backdrop-blur flex items-center justify-center mb-6">
+                    <AlertTriangle className="w-6 h-6" style={{ color: '#00ADEF' }} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">تنبيهات النظام</h3>
+                  <p className="text-white/80 text-sm mb-6 leading-relaxed">
+                    يوجد {events.filter(e => e.registeredCount >= e.capacity).reduce((acc, curr) => acc + curr.waitlistCount, 0)} طالب في قوائم انتظار الفعاليات المكتملة. يرجى مراجعة القوائم واتخاذ الإجراء اللازم.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('events')}
+                    className="w-full py-3 bg-secondary text-white font-bold rounded-xl hover:bg-white hover:text-primary transition-colors shadow-lg"
+                  >
+                    إدارة قوائم الانتظار
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Events Tab ─── */}
+        {activeTab === 'events' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+              <h3 className="text-2xl font-bold flex items-center gap-3">
+                <span className="w-3 h-8 bg-secondary rounded-full block"></span>
+                إدارة الفعاليات
+              </h3>
+              <div className="flex w-full md:w-auto gap-3">
+                <div className="relative flex-1 md:w-64">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={eventSearch}
+                    onChange={e => setEventSearch(e.target.value)}
+                    placeholder="بحث عن فعالية..."
+                    className="w-full pr-10 pl-4 py-2.5 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary text-sm font-medium"
+                  />
+                </div>
+                <button
+                  onClick={openCreateModal}
+                  className="flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all font-bold shadow-md shadow-primary/20"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="hidden sm:inline">فعالية جديدة</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-muted/50 border-b border-border text-muted-foreground">
+                    <tr>
+                      <th className="px-6 py-4 font-bold">الفعالية</th>
+                      <th className="px-6 py-4 font-bold">التاريخ والوقت</th>
+                      <th className="px-6 py-4 font-bold hidden md:table-cell">المنظم</th>
+                      <th className="px-6 py-4 font-bold">التسجيل</th>
+                      <th className="px-6 py-4 font-bold">الحالة</th>
+                      <th className="px-6 py-4 font-bold text-center">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredEvents.map((event) => (
+                      <tr key={event.id} className={`hover:bg-muted/30 transition-colors ${event.status === 'cancelled' ? 'opacity-60' : ''}`}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-border hidden sm:block">
+                              <img src={event.image} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-foreground line-clamp-1">{event.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{event.category} · {event.college}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-foreground">
+                          {event.date}
+                          <br />
+                          <span className="text-xs text-muted-foreground">{event.time}</span>
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-muted text-foreground">
+                            {event.organizer}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="font-bold">{event.registeredCount}</span>
+                              <span className="text-muted-foreground">/ {event.capacity}</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${event.registeredCount >= event.capacity ? 'bg-destructive' : 'bg-primary'}`}
+                                style={{ width: `${Math.min(100, (event.registeredCount / event.capacity) * 100)}%` }}
+                              ></div>
+                            </div>
+                            {event.registeredCount >= event.capacity && event.waitlistCount > 0 && (
+                              <span className="text-[10px] font-bold text-orange-500 flex items-center gap-1 mt-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {event.waitlistCount} في الانتظار
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                            event.status === 'upcoming'
+                              ? 'bg-primary/5 text-primary border-primary/20'
+                              : event.status === 'cancelled'
+                              ? 'bg-destructive/10 text-destructive border-destructive/20'
+                              : 'bg-muted text-muted-foreground border-border'
+                          }`}>
+                            {event.status === 'upcoming' ? 'نشطة' : event.status === 'cancelled' ? 'ملغاة' : 'منتهية'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => navigate(`/admin/event/${event.id}`)}
+                              className="p-2 bg-white border border-border text-foreground hover:bg-blue-500 hover:text-white hover:border-blue-500 rounded-lg transition-all"
+                              title="عرض التفاصيل"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => { setSelectedEventForAttendance(event.id); setActiveTab('attendance'); }}
+                              className="p-2 bg-white border border-border text-foreground hover:bg-green-500 hover:text-white hover:border-green-500 rounded-lg transition-all"
+                              title="قائمة الحضور"
+                            >
+                              <ListChecks className="w-4 h-4" />
+                            </button>
+                            {event.registeredCount >= event.capacity && event.waitlistCount > 0 && (
+                              <button
+                                onClick={() => handleNotifyWaitlist(event)}
+                                className="p-2 bg-secondary/10 border border-secondary/20 text-secondary hover:bg-secondary hover:text-white rounded-lg transition-all"
+                                title="تنبيه قائمة الانتظار"
+                              >
+                                <Bell className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEditModal(event)}
+                              className="p-2 bg-white border border-border text-foreground hover:bg-primary hover:text-white hover:border-primary rounded-lg transition-all"
+                              title="تعديل"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(event.id)}
+                              className="p-2 bg-white border border-border text-foreground hover:bg-destructive hover:text-white hover:border-destructive rounded-lg transition-all"
+                              title="حذف"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Attendance Tab (Req 36-37) ─── */}
+        {activeTab === 'attendance' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+              <div>
+                <h3 className="text-2xl font-bold flex items-center gap-3">
+                  <span className="w-3 h-8 bg-green-500 rounded-full block"></span>
+                  الحضور والغياب
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">مراقبة الحضور الفعلي لكل فعالية والتحقق من السجلات</p>
+              </div>
+              <div className="relative">
+                <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <select
+                  value={selectedEventForAttendance}
+                  onChange={e => setSelectedEventForAttendance(e.target.value)}
+                  className="pr-10 pl-4 py-2.5 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary text-sm font-medium appearance-none min-w-[240px]"
+                >
+                  <option value="">اختر الفعالية</option>
+                  {events.map(e => (
+                    <option key={e.id} value={e.id}>{e.title}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedEventForAttendance ? (() => {
+              const selectedEvent = events.find(e => e.id === selectedEventForAttendance);
+              const attendanceList = getAttendanceForEvent(selectedEventForAttendance);
+              const checkedInCount = attendanceList.filter(a => a.checkedIn).length;
+              const checkedOutCount = attendanceList.filter(a => a.checkedOut).length;
+              const absentCount = attendanceList.filter(a => !a.checkedIn && a.status === 'registered').length;
+
+              return (
+                <div className="space-y-6">
+                  {selectedEvent && (
+                    <div className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <img src={selectedEvent.image} alt="" className="w-20 h-20 rounded-xl object-cover border border-border hidden sm:block" />
+                      <div className="flex-1">
+                        <h4 className="text-xl font-bold text-foreground">{selectedEvent.title}</h4>
+                        <div className="flex flex-wrap gap-3 mt-1 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {selectedEvent.date}</span>
+                          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {selectedEvent.time}</span>
+                          <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {selectedEvent.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Attendance Stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                      { label: 'إجمالي المسجلين', value: attendanceList.length, color: 'text-primary', bg: 'bg-primary/10' },
+                      { label: 'حضروا', value: checkedInCount, color: 'text-green-600', bg: 'bg-green-50' },
+                      { label: 'غادروا', value: checkedOutCount, color: 'text-secondary', bg: 'bg-secondary/10' },
+                      { label: 'غائب', value: absentCount, color: 'text-destructive', bg: 'bg-destructive/10' },
+                    ].map((stat, i) => (
+                      <div key={i} className="bg-card border border-border rounded-2xl p-4 text-center">
+                        <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
+                        <p className="text-xs text-muted-foreground font-medium mt-1">{stat.label}</p>
+                        <div className={`w-10 h-1.5 rounded-full mx-auto mt-2 ${stat.bg.replace('/10', '').replace('bg-', 'bg-')}`}
+                          style={{ backgroundColor: i === 0 ? '#1E2652' : i === 1 ? '#16a34a' : i === 2 ? '#5C2D91' : '#dc2626', opacity: 0.4 }}
+                        ></div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Attendance Table (Req 36) */}
+                  <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                      <h4 className="font-bold text-foreground">قائمة الحضور التفصيلية</h4>
+                      <button
+                        onClick={handleGenerateReport}
+                        className="flex items-center gap-2 px-4 py-2 bg-secondary text-white text-sm font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        تصدير التقرير
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-right">
+                        <thead className="bg-muted/50 border-b border-border text-muted-foreground">
+                          <tr>
+                            <th className="px-6 py-3 font-bold">الطالب</th>
+                            <th className="px-6 py-3 font-bold">الرقم الجامعي</th>
+                            <th className="px-6 py-3 font-bold hidden md:table-cell">الكلية</th>
+                            <th className="px-6 py-3 font-bold">تسجيل الحضور</th>
+                            <th className="px-6 py-3 font-bold">المغادرة</th>
+                            <th className="px-6 py-3 font-bold">التقييم</th>
+                            <th className="px-6 py-3 font-bold">الحالة</th>
+                            <th className="px-6 py-3 font-bold text-center">الشهادة</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {attendanceList.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-medium">
+                                لا توجد بيانات حضور لهذه الفعالية
+                              </td>
+                            </tr>
+                          ) : attendanceList.map((entry) => {
+                            const certIssued = issuedCertsMap[entry.registrationId] ?? false;
+                            const canIssueCert = entry.checkedIn; // attended = can get cert
+                            return (
+                            <tr key={entry.registrationId} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">
+                                    {entry.studentName.charAt(0)}
+                                  </div>
+                                  <span className="font-bold text-foreground">{entry.studentName}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-muted-foreground">{entry.studentId}</td>
+                              <td className="px-6 py-4 text-muted-foreground hidden md:table-cell">{entry.college}</td>
+                              <td className="px-6 py-4">
+                                {entry.checkedIn ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-200">
+                                    <CheckCircle2 className="w-3 h-3" /> حضر
+                                    {entry.checkinTime && <span className="opacity-60 mr-1 text-[10px]">{new Date(entry.checkinTime).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-muted text-muted-foreground rounded-lg text-xs font-bold border border-border">
+                                    <XCircle className="w-3 h-3" /> لم يحضر
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                {entry.checkedOut ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/10 text-secondary rounded-lg text-xs font-bold border border-secondary/20">
+                                    <CheckCircle2 className="w-3 h-3" /> غادر
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                {entry.feedbackSubmitted ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-200">
+                                    <BadgeCheck className="w-3 h-3" /> قُيِّم
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">لم يُقيَّم</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border ${
+                                    entry.status === 'attended'
+                                      ? 'bg-green-50 text-green-700 border-green-200'
+                                      : entry.status === 'absent'
+                                      ? 'bg-destructive/10 text-destructive border-destructive/20'
+                                      : 'bg-primary/5 text-primary border-primary/20'
+                                  }`}>
+                                    {entry.status === 'attended' ? 'حاضر' : entry.status === 'absent' ? 'غائب' : 'مسجل'}
+                                  </span>
+                                  {entry.status === 'registered' && !entry.checkedIn && (
+                                    <button
+                                      onClick={() => handleMarkAbsent(entry)}
+                                      className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] font-bold rounded-lg border border-destructive/20 hover:bg-destructive hover:text-white transition-all whitespace-nowrap"
+                                    >
+                                      تسجيل غياب
+                                    </button>
+                                  )}
+                                  {(() => {
+                                    const ac = getAbsenceCount(entry.userId);
+                                    return ac > 0 ? (
+                                      <span className={`px-1.5 py-0.5 text-[10px] font-black rounded-full border ${ac >= 3 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                                        {ac}/3 غياب
+                                      </span>
+                                    ) : null;
+                                  })()}
+                                </div>
+                              </td>
+
+                              {/* ── Certificate column ── */}
+                              <td className="px-6 py-4 text-center">
+                                {!canIssueCert ? (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                ) : certIssued ? (
+                                  <button
+                                    onClick={() => {
+                                      const ev = events.find(e => e.id === entry.eventId);
+                                      if (!ev) return;
+                                      setAdminCertModal({
+                                        studentName: entry.studentName,
+                                        studentId: entry.studentId,
+                                        eventTitle: ev.title,
+                                        eventDate: ev.date,
+                                        studentEmail: `${entry.studentId}@imamu.edu.sa`,
+                                      });
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 text-secondary rounded-lg text-xs font-bold border border-secondary/20 hover:bg-secondary hover:text-white transition-all"
+                                    title="عرض الشهادة"
+                                  >
+                                    <Award className="w-3.5 h-3.5" />
+                                    عرض
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleIssueCertificate(entry)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-white rounded-lg text-xs font-bold hover:bg-secondary/90 transition-all shadow-sm whitespace-nowrap"
+                                    title="إصدار شهادة حضور"
+                                  >
+                                    <Award className="w-3.5 h-3.5" />
+                                    إصدار
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
+              <div className="bg-card border border-border rounded-3xl p-16 text-center">
+                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ListChecks className="w-10 h-10 text-muted-foreground/40" />
+                </div>
+                <p className="font-bold text-foreground text-lg mb-1">اختر فعالية لعرض قائمة الحضور</p>
+                <p className="text-sm text-muted-foreground">ستظهر هنا تفاصيل الحضور والغياب بشكل فوري</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── Reports Tab (Req 38-39) ─── */}
+        {activeTab === 'reports' && (
+          <div className="animate-in fade-in duration-300">
+            <h3 className="text-2xl font-bold flex items-center gap-3 mb-8">
+              <span className="w-3 h-8 bg-secondary rounded-full block"></span>
+              التقارير والإحصائيات المتقدمة
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-[#13193E] to-primary rounded-3xl p-8 text-white relative overflow-hidden shadow-lg group">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center mb-6">
+                    <FileText className="w-7 h-7 text-secondary" />
+                  </div>
+                  <h4 className="text-2xl font-bold mb-3">تقارير الحضور الشاملة</h4>
+                  <p className="text-white/70 mb-8 text-sm leading-relaxed max-w-sm">
+                    استخراج تقارير مفصلة توضح معدلات الحضور والغياب لجميع الأنشطة الجامعية.
+                  </p>
+                  <button
+                    onClick={handleGenerateReport}
+                    className="px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-secondary hover:text-white transition-colors shadow-lg"
+                  >
+                    توليد التقرير
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-card border-2 border-border rounded-3xl p-8 relative overflow-hidden group hover:border-secondary transition-colors">
+                <div className="absolute left-0 bottom-0 w-32 h-32 bg-secondary/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6">
+                    <Award className="w-7 h-7 text-secondary" />
+                  </div>
+                  <h4 className="text-2xl font-bold mb-3 text-foreground">مركز إصدار الشهادات</h4>
+                  <p className="text-muted-foreground mb-8 text-sm leading-relaxed max-w-sm">
+                    نظام آلي لإصدار وتوثيق شهادات الحضور وإرسالها مباشرة إلى البريد الجامعي للطلاب المستحقين.
+                  </p>
+                  <button className="px-6 py-3 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-colors shadow-md shadow-secondary/20">
+                    إدارة وإرسال الشهادات
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Certificate Approval Section (Req 37) */}
+            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm mb-6">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <h4 className="font-bold text-foreground flex items-center gap-2">
+                  <Award className="w-5 h-5 text-secondary" />
+                  الموافقة على إصدار الشهادات
+                </h4>
+                <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                  {mockRegistrations.filter(r => r.feedbackSubmitted && r.certificateIssued).length} شهادة معلقة
+                </span>
+              </div>
+              <div className="p-4">
+                {mockRegistrations.filter(r => r.feedbackSubmitted && r.certificateIssued).length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-6">لا توجد شهادات تنتظر الموافقة حالياً</p>
+                ) : (
+                  <div className="space-y-3">
+                    {mockRegistrations.filter(r => r.feedbackSubmitted && r.certificateIssued).map(reg => {
+                      const event = events.find(e => e.id === reg.eventId);
+                      if (!event) return null;
+                      const approved = certApprovals[reg.id];
+                      return (
+                        <div key={reg.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border gap-4">
+                          <div>
+                            <p className="font-bold text-sm text-foreground">{event.title}</p>
+                            <p className="text-xs text-muted-foreground">رقم التسجيل: {reg.id} · {event.date}</p>
+                          </div>
+                          {approved ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-200">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> تمت الموافقة
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleApproveCertificate(reg.id)}
+                              className="px-4 py-1.5 bg-secondary text-white text-xs font-bold rounded-lg hover:bg-secondary/90 transition-colors shadow-sm"
+                            >
+                              موافقة وإصدار
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Events summary table */}
+            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+              <div className="px-6 py-4 border-b border-border">
+                <h4 className="font-bold text-foreground flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  ملخص أداء الفعاليات
+                </h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-muted/50 border-b border-border text-muted-foreground">
+                    <tr>
+                      <th className="px-6 py-3 font-bold">الفعالية</th>
+                      <th className="px-6 py-3 font-bold">التسجيل</th>
+                      <th className="px-6 py-3 font-bold">الحضور</th>
+                      <th className="px-6 py-3 font-bold">التقييمات</th>
+                      <th className="px-6 py-3 font-bold">معدل الحضور</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {events.map(event => {
+                      const eventRegs = mockRegistrations.filter(r => r.eventId === event.id);
+                      const attended = eventRegs.filter(r => r.status === 'attended').length;
+                      const feedback = eventRegs.filter(r => r.feedbackSubmitted).length;
+                      const rate = event.registeredCount > 0 ? Math.round((attended / event.registeredCount) * 100) : 0;
+                      return (
+                        <tr key={event.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-6 py-3">
+                            <p className="font-bold text-foreground line-clamp-1">{event.title}</p>
+                            <p className="text-xs text-muted-foreground">{event.date}</p>
+                          </td>
+                          <td className="px-6 py-3 font-medium">{event.registeredCount} / {event.capacity}</td>
+                          <td className="px-6 py-3 font-bold text-green-600">{attended}</td>
+                          <td className="px-6 py-3 font-bold text-secondary">{feedback}</td>
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-muted rounded-full h-2">
+                                <div className="bg-primary h-2 rounded-full" style={{ width: `${rate}%` }}></div>
+                              </div>
+                              <span className="text-xs font-bold">{rate}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Notification Center Tab ─── */}
+        {activeTab === 'notifications' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+              <div>
+                <h3 className="text-2xl font-bold flex items-center gap-3">
+                  <span className="w-3 h-8 bg-secondary rounded-full block"></span>
+                  مركز الإشعارات والبريد الإلكتروني
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">سجل كامل لجميع الرسائل المُرسَلة تلقائياً من النظام</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEmailLogs(getEmailLogs())}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-card border-2 border-border text-foreground text-sm font-bold rounded-xl hover:bg-muted transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  تحديث
+                </button>
+                <button
+                  onClick={() => { clearEmailLogs(); setEmailLogs([]); }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-destructive border-2 border-destructive/20 rounded-xl hover:bg-destructive/5 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  مسح السجل
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+              {[
+                { type: 'all', label: 'الكل', count: emailLogs.length, style: 'bg-muted text-foreground border-border' },
+                { type: 'registration_confirmation', label: 'تأكيد التسجيل', count: emailLogs.filter(l => l.type === 'registration_confirmation').length, style: 'bg-primary/5 text-primary border-primary/20' },
+                { type: 'waitlist_notification', label: 'قائمة الانتظار', count: emailLogs.filter(l => l.type === 'waitlist_notification').length, style: 'bg-orange-50 text-orange-600 border-orange-200' },
+                { type: 'waitlist_promotion', label: 'ترقية الانتظار', count: emailLogs.filter(l => l.type === 'waitlist_promotion').length, style: 'bg-green-50 text-green-600 border-green-200' },
+                { type: 'certificate', label: 'الشهادات', count: emailLogs.filter(l => l.type === 'certificate').length, style: 'bg-secondary/10 text-secondary border-secondary/20' },
+                { type: 'block_notification', label: 'إشعارات الحظر', count: emailLogs.filter(l => l.type === 'block_notification').length, style: 'bg-destructive/10 text-destructive border-destructive/20' },
+                { type: 'absence_warning', label: 'تحذيرات الغياب', count: emailLogs.filter(l => l.type === 'absence_warning').length, style: 'bg-orange-50 text-orange-700 border-orange-300' },
+              ].map(item => (
+                <button
+                  key={item.type}
+                  onClick={() => setEmailFilter(item.type)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 text-center transition-all ${
+                    emailFilter === item.type
+                      ? item.style + ' shadow-sm scale-[1.02]'
+                      : 'bg-card border-border text-muted-foreground hover:border-border/80'
+                  }`}
+                >
+                  <span className="text-xl font-black">{item.count}</span>
+                  <span className="text-xs font-bold">{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {filteredLogs.length === 0 ? (
+              <div className="bg-card border border-border rounded-3xl p-16 text-center">
+                <div className="w-20 h-20 bg-muted rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <Mail className="w-10 h-10 text-muted-foreground/30" />
+                </div>
+                <p className="font-bold text-foreground text-lg mb-1">لا توجد سجلات إشعارات</p>
+                <p className="text-sm text-muted-foreground">ستظهر هنا الرسائل المُرسَلة عند تسجيل الطلاب في الفعاليات</p>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-right">
+                    <thead className="bg-muted/50 border-b border-border text-muted-foreground">
+                      <tr>
+                        <th className="px-6 py-4 font-bold">نوع الإشعار</th>
+                        <th className="px-6 py-4 font-bold">المستلم</th>
+                        <th className="px-6 py-4 font-bold">الفعالية</th>
+                        <th className="px-6 py-4 font-bold">وقت الإرسال</th>
+                        <th className="px-6 py-4 font-bold">الحالة</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${getEmailTypeStyle(log.type)}`}>
+                              {getEmailTypeIcon(log.type)}
+                              {getEmailTypeLabel(log.type)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="font-bold text-foreground">{log.recipientName}</p>
+                            <p className="text-xs text-muted-foreground">{log.recipientEmail}</p>
+                          </td>
+                          <td className="px-6 py-4 max-w-[200px]">
+                            <p className="font-medium text-foreground line-clamp-1">{log.eventTitle}</p>
+                            <p className="text-xs text-muted-foreground">{log.eventDate}</p>
+                          </td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">
+                            {new Date(log.sentAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            <br />
+                            {new Date(log.sentAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                              log.status === 'delivered'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : log.status === 'failed'
+                                ? 'bg-destructive/10 text-destructive border-destructive/20'
+                                : 'bg-blue-50 text-blue-600 border-blue-200'
+                            }`}>
+                              {log.status === 'delivered' && <CheckCircle2 className="w-3 h-3" />}
+                              {log.status === 'failed' && <XCircle className="w-3 h-3" />}
+                              {log.status === 'sent' && <Send className="w-3 h-3" />}
+                              {log.status === 'delivered' ? 'تم التسليم' : log.status === 'failed' ? 'فشل' : 'مرسل'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── Student Monitoring Tab (read-only, system auto-blocks) ─── */}
+        {activeTab === 'users' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <div>
+                <h3 className="text-2xl font-bold flex items-center gap-3">
+                  <span className="w-3 h-8 bg-primary rounded-full block"></span>
+                  متابعة الطلاب
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  عرض سجل الغيابات وحالة الطلاب — الحجب يتم تلقائياً بواسطة النظام عند بلوغ 3 غيابات
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="بحث بالاسم أو الرقم الجامعي..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pr-10 pl-4 py-2.5 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary text-sm font-medium w-72"
+                />
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-foreground">{MOCK_STUDENTS.length}</p>
+                  <p className="text-xs text-muted-foreground font-medium">إجمالي الطلاب</p>
+                </div>
+              </div>
+              <div className="bg-card border border-orange-200 rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-orange-600">
+                    {MOCK_STUDENTS.filter(s => getAbsenceCount(s.id) > 0 && getAbsenceCount(s.id) < 3).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">طلاب لديهم غيابات</p>
+                </div>
+              </div>
+              <div className="bg-card border border-destructive/20 rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-11 h-11 bg-destructive/10 rounded-xl flex items-center justify-center shrink-0">
+                  <XCircle className="w-6 h-6 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-destructive">{blockedUsers.length}</p>
+                  <p className="text-xs text-muted-foreground font-medium">طلاب موقوفون تلقائياً</p>
+                </div>
+              </div>
+            </div>
+
+            {/* System notice */}
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-6 flex items-start gap-3">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldAlert className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-primary">آلية الحجب التلقائي</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  يقوم النظام تلقائياً بحجب الطالب لمدة شهر كامل عند وصول عدد غياباته إلى 3 غيابات،
+                  ويُرسل إشعاراً فورياً بالبريد الإلكتروني والتطبيق يوضح السبب ومدة الحجب. لا يملك الإداري صلاحية الحجب أو رفعه يدوياً.
+                </p>
+              </div>
+            </div>
+
+            {/* Students table — read-only */}
+            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-muted/50 border-b border-border text-muted-foreground">
+                    <tr>
+                      <th className="px-6 py-4 font-bold">الطالب</th>
+                      <th className="px-6 py-4 font-bold">الرقم الجامعي</th>
+                      <th className="px-6 py-4 font-bold hidden md:table-cell">الكلية</th>
+                      <th className="px-6 py-4 font-bold">الغيابات (نظام)</th>
+                      <th className="px-6 py-4 font-bold">الحالة</th>
+                      <th className="px-6 py-4 font-bold hidden lg:table-cell">سبب الحجب / انتهاؤه</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredStudents.map((student) => {
+                      const blockedEntry = blockedUsers.find((b) => b.userId === student.id);
+                      const isBlocked = !!blockedEntry;
+                      const studentAbsences = getAbsenceCount(student.id);
+                      return (
+                        <tr key={student.id} className={`hover:bg-muted/30 transition-colors ${isBlocked ? 'bg-destructive/[0.02]' : ''}`}>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-black text-sm ${
+                                isBlocked ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                              }`}>
+                                {student.name.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-foreground">{student.name}</p>
+                                <p className="text-xs text-muted-foreground">{student.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-foreground">{student.studentId}</td>
+                          <td className="px-6 py-4 text-muted-foreground hidden md:table-cell">{student.college}</td>
+
+                          {/* Absence indicator — system-tracked */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="flex gap-1">
+                                {[1, 2, 3].map(n => (
+                                  <div
+                                    key={n}
+                                    className={`w-3 h-3 rounded-full transition-colors ${
+                                      n <= studentAbsences
+                                        ? studentAbsences >= 3 ? 'bg-destructive' : 'bg-orange-400'
+                                        : 'bg-muted border border-border'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className={`text-xs font-bold ${
+                                studentAbsences >= 3 ? 'text-destructive' :
+                                studentAbsences > 0 ? 'text-orange-600' : 'text-muted-foreground'
+                              }`}>
+                                {studentAbsences}/3
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Status — system-set only */}
+                          <td className="px-6 py-4">
+                            {isBlocked ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 text-destructive rounded-lg text-xs font-bold border border-destructive/20">
+                                <XCircle className="w-3 h-3" />
+                                موقوف تلقائياً
+                              </span>
+                            ) : studentAbsences > 0 ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 text-orange-600 rounded-lg text-xs font-bold border border-orange-200">
+                                <AlertTriangle className="w-3 h-3" />
+                                تحت المراقبة
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-200">
+                                <CheckCircle2 className="w-3 h-3" />
+                                نشط
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Block details — read-only */}
+                          <td className="px-6 py-4 hidden lg:table-cell">
+                            {blockedEntry ? (
+                              <div>
+                                <p className="text-xs text-destructive font-medium line-clamp-1 max-w-[200px]">
+                                  {blockedEntry.reason}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  ينتهي تلقائياً: {new Date(blockedEntry.blockedUntil).toLocaleDateString('ar-SA', {
+                                    year: 'numeric', month: 'short', day: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ─── Create / Edit Event Modal ─── */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-card rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-border">
+            <div className="px-6 py-4 bg-muted/50 border-b border-border flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                  {editingEvent ? <Edit className="w-4 h-4 text-primary" /> : <Plus className="w-5 h-5 text-primary" />}
+                </div>
+                {editingEvent ? 'تعديل الفعالية' : 'إضافة فعالية جديدة'}
+              </h3>
+              <button
+                onClick={() => { setShowCreateModal(false); setEditingEvent(null); }}
+                className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-bold mb-2">اسم الفعالية <span className="text-destructive">*</span></label>
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={e => setEventForm({...eventForm, title: e.target.value})}
+                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                    placeholder="مثال: ورشة عمل الذكاء الاصطناعي"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">الوصف</label>
+                  <textarea
+                    value={eventForm.description}
+                    onChange={e => setEventForm({...eventForm, description: e.target.value})}
+                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
+                    rows={3}
+                    placeholder="وصف مفصل عن أهداف ومحتوى الفعالية..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-2">التاريخ <span className="text-destructive">*</span></label>
+                    <input
+                      type="date"
+                      value={eventForm.date}
+                      onChange={e => setEventForm({...eventForm, date: e.target.value})}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الوقت</label>
+                    <input
+                      type="text"
+                      value={eventForm.time}
+                      onChange={e => setEventForm({...eventForm, time: e.target.value})}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      placeholder="10:00 - 14:00"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">الموقع / القاعة <span className="text-destructive">*</span></label>
+                  <input
+                    type="text"
+                    value={eventForm.location}
+                    onChange={e => setEventForm({...eventForm, location: e.target.value})}
+                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                    placeholder="مثال: مبنى المؤتمرات - القاعة الكبرى"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">المنظم</label>
+                  <input
+                    type="text"
+                    value={eventForm.organizer}
+                    onChange={e => setEventForm({...eventForm, organizer: e.target.value})}
+                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                    placeholder="مثال: نادي البرمجة"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الفئة</label>
+                    <select
+                      value={eventForm.category}
+                      onChange={e => setEventForm({...eventForm, category: e.target.value})}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                    >
+                      {interests.map(i => <option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الكلية</label>
+                    <select
+                      value={eventForm.college}
+                      onChange={e => setEventForm({...eventForm, college: e.target.value})}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                    >
+                      {colleges.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الطاقة الاستيعابية</label>
+                    <input
+                      type="number"
+                      value={eventForm.capacity}
+                      onChange={e => setEventForm({...eventForm, capacity: parseInt(e.target.value) || 0})}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      min={1}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الحالة</label>
+                    <select
+                      value={eventForm.status}
+                      onChange={e => setEventForm({...eventForm, status: e.target.value as Event['status']})}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                    >
+                      <option value="upcoming">قادمة</option>
+                      <option value="ongoing">جارية</option>
+                      <option value="completed">منتهية</option>
+                      <option value="cancelled">ملغاة</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">رابط صورة الفعالية</label>
+                  <input
+                    type="url"
+                    value={eventForm.image}
+                    onChange={e => setEventForm({...eventForm, image: e.target.value})}
+                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-xl">
+                  <input
+                    type="checkbox"
+                    id="requiresFeedback"
+                    checked={eventForm.requiresFeedback}
+                    onChange={e => setEventForm({...eventForm, requiresFeedback: e.target.checked})}
+                    className="w-5 h-5 rounded border-2 border-border accent-secondary"
+                  />
+                  <label htmlFor="requiresFeedback" className="text-sm font-bold cursor-pointer">
+                    التقييم إلزامي للحصول على الشهادة
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-muted/50 border-t border-border flex gap-3 shrink-0">
+              <button
+                onClick={() => { setShowCreateModal(false); setEditingEvent(null); }}
+                className="flex-1 py-3 bg-white border-2 border-border text-foreground font-bold rounded-xl hover:bg-muted transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSaveEvent}
+                className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"
+              >
+                {editingEvent ? 'حفظ التعديلات' : 'نشر الفعالية'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Admin Certificate Preview Modal ─── */}
+      {adminCertModal && (
+        <CertificateModal
+          isOpen={!!adminCertModal}
+          onClose={() => setAdminCertModal(null)}
+          studentName={adminCertModal.studentName}
+          eventTitle={adminCertModal.eventTitle}
+          eventDate={adminCertModal.eventDate}
+          studentId={adminCertModal.studentId}
+        />
+      )}
+
+      {/* ─── Delete Confirm Modal ─── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-card rounded-3xl w-full max-w-sm shadow-2xl border border-border overflow-hidden animate-in zoom-in-95">
+            <div className="px-6 pt-7 pb-5 border-b border-border text-center">
+              <div className="w-14 h-14 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-7 h-7 text-destructive" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-1">حذف الفعالية</h3>
+              <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف هذه الفعالية؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+            <div className="p-6 flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-3 bg-white border-2 border-border text-foreground font-bold rounded-xl hover:bg-muted transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(showDeleteConfirm)}
+                className="flex-1 py-3 bg-destructive text-white font-bold rounded-xl hover:bg-destructive/90 transition-colors shadow-md"
+              >
+                حذف نهائياً
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+    </div>
+  );
+}
