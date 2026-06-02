@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockEvents, mockRegistrations, Registration } from '../data/mockData';
+import { mockEvents, mockRegistrations, mockUsersDB, Registration } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import {
   Calendar,
@@ -24,7 +24,7 @@ import { UniversityLogo } from './UniversityLogo';
 import { EmailConfirmationModal } from './EmailConfirmationModal';
 import { CheckInModal } from './CheckInModal';
 import { CertificateModal } from './CertificateModal';
-import { sendRegistrationConfirmation, sendWaitlistConfirmation, isUserBlocked } from '../services/emailService';
+import { sendRegistrationConfirmation, sendWaitlistConfirmation, sendWaitlistPromotion, isUserBlocked } from '../services/emailService';
 import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
 
 interface EventDetailsPageProps {
@@ -143,6 +143,23 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
           r.id === myRegistration?.id ? { ...r, status: 'cancelled' as const } : r
         )
       );
+
+      // Notify Waitlist <<extend>> Cancel Registration — per use case diagram
+      const firstWaitlisted = registrations.find(
+        (r) => r.eventId === event.id && r.status === 'waitlist' && r.userId !== user?.id
+      );
+      if (firstWaitlisted) {
+        const waitlistedUser = mockUsersDB.find((u) => u.id === firstWaitlisted.userId);
+        sendWaitlistPromotion({
+          recipientName: waitlistedUser?.name ?? 'طالب قائمة الانتظار',
+          recipientEmail: waitlistedUser?.email ?? `${firstWaitlisted.userId}@imamu.edu.sa`,
+          eventTitle: event.title,
+          eventDate: event.date,
+          eventTime: event.time,
+          eventLocation: event.location,
+          userId: firstWaitlisted.userId,
+        });
+      }
     }
   };
 
@@ -209,6 +226,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
     setRating(0);
     setOrganizerRating(0);
     setFeedback('');
+    // Submit Feedback <<include>> Download Certificate — per use case diagram
+    setShowCertModal(true);
   };
 
   const statusBadge = () => {

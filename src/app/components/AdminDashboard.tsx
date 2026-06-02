@@ -44,6 +44,7 @@ import {
   sendCertificateEmail,
 } from '../services/emailService';
 import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
+import { autoIssueCertificatesForEvent, getIssuedCerts, markCertIssued } from '../services/certificateService';
 import { CertificateModal } from './CertificateModal';
 
 // ─── Local event storage (CRUD) ───────────────────────────────────────────────
@@ -146,12 +147,11 @@ export function AdminDashboard() {
   // Attendance tab
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<string>('');
   const [attendanceData, setAttendanceData] = useState(mockAttendanceData);
-  const [certApprovals, setCertApprovals] = useState<Record<string, boolean>>({}); // registrationId → approved
-
-  // Certificate issuance from attendance tab
-  const [issuedCertsMap, setIssuedCertsMap] = useState<Record<string, boolean>>({
+  // Certificate issuance from attendance tab — persisted via certificateService
+  const [issuedCertsMap, setIssuedCertsMap] = useState<Record<string, boolean>>(() => ({
     r6: true, // pre-issued for سارة in event 4
-  });
+    ...getIssuedCerts(),
+  }));
   const [adminCertModal, setAdminCertModal] = useState<{
     studentName: string;
     studentId: string;
@@ -222,6 +222,12 @@ export function AdminDashboard() {
       alert('يرجى ملء الحقول الإلزامية: اسم الفعالية، التاريخ، والموقع.');
       return;
     }
+
+    const becomingCompleted =
+      editingEvent &&
+      editingEvent.status !== 'completed' &&
+      eventForm.status === 'completed';
+
     let updated: Event[];
     if (editingEvent) {
       updated = events.map(e => e.id === editingEvent.id ? { ...eventForm, id: editingEvent.id } : e);
@@ -231,6 +237,24 @@ export function AdminDashboard() {
     }
     setEvents(updated);
     saveEvents(updated);
+
+    // Auto-issue certificates when event is marked as completed
+    if (becomingCompleted) {
+      const { issuedCount, studentNames } = autoIssueCertificatesForEvent(
+        { id: editingEvent.id, title: eventForm.title, date: eventForm.date },
+        attendanceData
+      );
+      setIssuedCertsMap(getIssuedCerts());
+      setEmailLogs(getEmailLogs());
+      if (issuedCount > 0) {
+        alert(
+          `✅ تم إنهاء الفعالية "${eventForm.title}".\n\n🏆 صدرت شهادات الحضور تلقائياً لـ ${issuedCount} طالب:\n${studentNames.map(n => `• ${n}`).join('\n')}\n\nتم إرسال إشعار بريدي وإشعار داخلي لكل طالب.`
+        );
+      } else {
+        alert(`✅ تم إنهاء الفعالية "${eventForm.title}". لا يوجد طلاب مسجّلون بحضور لإصدار شهادات لهم.`);
+      }
+    }
+
     setShowCreateModal(false);
     setEditingEvent(null);
   };
@@ -291,12 +315,6 @@ export function AdminDashboard() {
     }
   };
 
-  // Approve certificate for a student (Req 37)
-  const handleApproveCertificate = (regId: string) => {
-    setCertApprovals(prev => ({ ...prev, [regId]: true }));
-    alert('تم الموافقة على إصدار الشهادة. سيتمكن الطالب الآن من تحميل شهادته.');
-  };
-
   // Issue certificate directly from attendance tab
   const handleIssueCertificate = (entry: typeof mockAttendanceData[0]) => {
     const event = events.find(e => e.id === entry.eventId);
@@ -311,7 +329,8 @@ export function AdminDashboard() {
       eventDate: event.date,
     });
 
-    // Mark as issued
+    // Mark as issued (in state + persistent storage)
+    markCertIssued(entry.registrationId);
     setIssuedCertsMap(prev => ({ ...prev, [entry.registrationId]: true }));
     setEmailLogs(getEmailLogs());
 
@@ -928,67 +947,6 @@ export function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-card border-2 border-border rounded-3xl p-8 relative overflow-hidden group hover:border-secondary transition-colors">
-                <div className="absolute left-0 bottom-0 w-32 h-32 bg-secondary/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6">
-                    <Award className="w-7 h-7 text-secondary" />
-                  </div>
-                  <h4 className="text-2xl font-bold mb-3 text-foreground">مركز إصدار الشهادات</h4>
-                  <p className="text-muted-foreground mb-8 text-sm leading-relaxed max-w-sm">
-                    نظام آلي لإصدار وتوثيق شهادات الحضور وإرسالها مباشرة إلى البريد الجامعي للطلاب المستحقين.
-                  </p>
-                  <button className="px-6 py-3 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-colors shadow-md shadow-secondary/20">
-                    إدارة وإرسال الشهادات
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Certificate Approval Section (Req 37) */}
-            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm mb-6">
-              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <h4 className="font-bold text-foreground flex items-center gap-2">
-                  <Award className="w-5 h-5 text-secondary" />
-                  الموافقة على إصدار الشهادات
-                </h4>
-                <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                  {mockRegistrations.filter(r => r.feedbackSubmitted && r.certificateIssued).length} شهادة معلقة
-                </span>
-              </div>
-              <div className="p-4">
-                {mockRegistrations.filter(r => r.feedbackSubmitted && r.certificateIssued).length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-6">لا توجد شهادات تنتظر الموافقة حالياً</p>
-                ) : (
-                  <div className="space-y-3">
-                    {mockRegistrations.filter(r => r.feedbackSubmitted && r.certificateIssued).map(reg => {
-                      const event = events.find(e => e.id === reg.eventId);
-                      if (!event) return null;
-                      const approved = certApprovals[reg.id];
-                      return (
-                        <div key={reg.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border gap-4">
-                          <div>
-                            <p className="font-bold text-sm text-foreground">{event.title}</p>
-                            <p className="text-xs text-muted-foreground">رقم التسجيل: {reg.id} · {event.date}</p>
-                          </div>
-                          {approved ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-200">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> تمت الموافقة
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleApproveCertificate(reg.id)}
-                              className="px-4 py-1.5 bg-secondary text-white text-xs font-bold rounded-lg hover:bg-secondary/90 transition-colors shadow-sm"
-                            >
-                              موافقة وإصدار
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Events summary table */}

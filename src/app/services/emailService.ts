@@ -266,6 +266,17 @@ export function sendCertificateEmail(params: {
     body: `عزيزي ${params.recipientName}،\n\nتهانينا! شهادة حضورك في "${params.eventTitle}" جاهزة للتحميل من قسم "خزنة الشهادات".\n\nمع تحيات فريق Imamu TechVerse`,
   };
   saveEmailLog(log);
+  if (params.userId) {
+    saveStudentNotification({
+      id: generateId(),
+      userId: params.userId,
+      title: '🏆 شهادتك جاهزة!',
+      message: `شهادة حضورك في "${params.eventTitle}" جاهزة للتحميل من قسم "خزنة الشهادات".`,
+      type: 'info',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
   return log;
 }
 

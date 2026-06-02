@@ -44,8 +44,8 @@ export interface Registration {
 export const mockUsersDB: User[] = [
   {
     id: '1',
-    name: 'أحمد محمد العلي',
-    email: 'ahmed.ali@imamu.edu.sa',
+    name: 'سمية محمد العلي',
+    email: 'samiya.ali@imamu.edu.sa',
     password: 'student123',
     studentId: '2024001',
     college: 'كلية علوم الحاسب',
@@ -85,7 +85,7 @@ export const mockUsersDB: User[] = [
   // Demo shortcuts
   {
     id: '1',
-    name: 'أحمد محمد العلي',
+    name: 'سمية محمد العلي',
     email: 'student@university.edu.sa',
     password: 'demo123',
     studentId: '2024001',
