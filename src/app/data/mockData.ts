@@ -1,3 +1,20 @@
+export type ActivityType =
+  | 'ورشة عمل'
+  | 'محاضرة'
+  | 'مسابقة'
+  | 'يوم تطوعي'
+  | 'معرض'
+  | 'ندوة'
+  | 'دورة تدريبية'
+  | 'فعالية ترفيهية';
+
+export type AudienceGroup =
+  | 'students'
+  | 'teaching_staff'
+  | 'administrative_staff'
+  | 'researchers'
+  | 'alumni';
+
 export interface Event {
   id: string;
   title: string;
@@ -6,6 +23,12 @@ export interface Event {
   time: string;
   location: string;
   category: string;
+  activityType: ActivityType;
+  /** Whether volunteers can register (in addition to attendees). */
+  needsVolunteers: boolean;
+  /** 'general' = open to all; 'restricted' = only allowedAudience groups. */
+  audienceType: 'general' | 'restricted';
+  allowedAudience: AudienceGroup[];
   capacity: number;
   registeredCount: number;
   waitlistCount: number;
@@ -16,6 +39,24 @@ export interface Event {
   requiresFeedback: boolean;
   lat?: number;
   lng?: number;
+}
+
+/** Returns true once the event's end time has passed. */
+export function hasEventEnded(event: Pick<Event, 'date' | 'time' | 'status'>): boolean {
+  if (event.status === 'completed' || event.status === 'cancelled') return true;
+  const today = new Date().toISOString().split('T')[0];
+  if (event.date < today) return true;
+  if (event.date === today) {
+    const parts = event.time.split('-');
+    const endStr = parts[parts.length - 1].trim();
+    const [h, m] = endStr.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) {
+      const end = new Date();
+      end.setHours(h, m, 0, 0);
+      return new Date() > end;
+    }
+  }
+  return false;
 }
 
 export interface User {
@@ -34,6 +75,7 @@ export interface Registration {
   userId: string;
   eventId: string;
   status: 'registered' | 'waitlist' | 'attended' | 'cancelled' | 'absent';
+  registrationRole: 'attendee' | 'volunteer';
   checkedIn: boolean;
   checkedOut: boolean;
   feedbackSubmitted: boolean;
@@ -117,6 +159,10 @@ export const mockEvents: Event[] = [
     time: '14:00 - 17:00',
     location: 'مركز الابتكار - القاعة A',
     category: 'تقني',
+    activityType: 'ورشة عمل',
+    needsVolunteers: false,
+    audienceType: 'restricted',
+    allowedAudience: ['students'],
     capacity: 50,
     registeredCount: 35,
     waitlistCount: 0,
@@ -136,6 +182,10 @@ export const mockEvents: Event[] = [
     time: '09:00 - 18:00',
     location: 'مبنى المختبرات',
     category: 'تقني',
+    activityType: 'مسابقة',
+    needsVolunteers: false,
+    audienceType: 'general',
+    allowedAudience: [],
     capacity: 100,
     registeredCount: 100,
     waitlistCount: 20,
@@ -155,6 +205,10 @@ export const mockEvents: Event[] = [
     time: '07:00 - 12:00',
     location: 'حديقة الملك فهد',
     category: 'تطوعي',
+    activityType: 'يوم تطوعي',
+    needsVolunteers: true,
+    audienceType: 'general',
+    allowedAudience: [],
     capacity: 80,
     registeredCount: 60,
     waitlistCount: 0,
@@ -174,6 +228,10 @@ export const mockEvents: Event[] = [
     time: '16:00 - 18:00',
     location: 'امدرج الكبير',
     category: 'علمي',
+    activityType: 'محاضرة',
+    needsVolunteers: false,
+    audienceType: 'general',
+    allowedAudience: [],
     capacity: 200,
     registeredCount: 150,
     waitlistCount: 0,
@@ -193,6 +251,10 @@ export const mockEvents: Event[] = [
     time: '10:00 - 14:00',
     location: 'مركز ريادة الأعمال',
     category: 'ريادة أعمال',
+    activityType: 'دورة تدريبية',
+    needsVolunteers: false,
+    audienceType: 'restricted',
+    allowedAudience: ['students'],
     capacity: 40,
     registeredCount: 30,
     waitlistCount: 0,
@@ -207,11 +269,15 @@ export const mockEvents: Event[] = [
   {
     id: '6',
     title: 'بطولة كرة القدم الجامعية',
-    description: 'مباراة نهائية لبطولة كرة القدم بين كليات الجامعة. تعال وشجع فريقك وعش أجواء الحماس والمنافسة الشر��فة.',
+    description: 'مباراة نهائية لبطولة كرة القدم بين كليات الجامعة. تعال وشجع فريقك وعش أجواء الحماس والمنافسة الشريفة.',
     date: '2026-05-30',
     time: '17:00 - 19:00',
     location: 'الملعب الرئيسي',
     category: 'رياضي',
+    activityType: 'فعالية ترفيهية',
+    needsVolunteers: true,
+    audienceType: 'general',
+    allowedAudience: [],
     capacity: 500,
     registeredCount: 200,
     waitlistCount: 0,
@@ -231,6 +297,10 @@ export const mockEvents: Event[] = [
     time: '11:00 - 21:00',
     location: 'القاعة الثقافية - المبنى الرئيسي',
     category: 'فني',
+    activityType: 'معرض',
+    needsVolunteers: false,
+    audienceType: 'general',
+    allowedAudience: [],
     capacity: 300,
     registeredCount: 120,
     waitlistCount: 0,
@@ -250,6 +320,10 @@ export const mockEvents: Event[] = [
     time: '15:00 - 18:00',
     location: 'قاعة المؤتمرات الكبرى',
     category: 'ثقافي',
+    activityType: 'ندوة',
+    needsVolunteers: false,
+    audienceType: 'general',
+    allowedAudience: [],
     capacity: 150,
     registeredCount: 90,
     waitlistCount: 0,
@@ -268,9 +342,10 @@ export const mockRegistrations: Registration[] = [
     id: 'r1',
     userId: '1',
     eventId: '1',
-    status: 'attended',      // ← تسجيل الحضور تم
-    checkedIn: true,         // ← دخل الفعالية
-    checkedOut: false,       // ← لم يغادر بعد — يظهر زر "تسجيل المغادرة"
+    status: 'attended',
+    registrationRole: 'attendee',
+    checkedIn: true,
+    checkedOut: false,
     feedbackSubmitted: false,
     certificateIssued: false,
   },
@@ -279,6 +354,7 @@ export const mockRegistrations: Registration[] = [
     userId: '1',
     eventId: '3',
     status: 'registered',
+    registrationRole: 'volunteer',
     checkedIn: false,
     checkedOut: false,
     feedbackSubmitted: false,
@@ -289,17 +365,18 @@ export const mockRegistrations: Registration[] = [
     userId: '1',
     eventId: '4',
     status: 'attended',
+    registrationRole: 'attendee',
     checkedIn: true,
     checkedOut: true,
     feedbackSubmitted: false,
     certificateIssued: false,
   },
-  // Mock attendance for admin reports
   {
     id: 'r4',
     userId: '2',
     eventId: '1',
     status: 'registered',
+    registrationRole: 'attendee',
     checkedIn: false,
     checkedOut: false,
     feedbackSubmitted: false,
@@ -310,6 +387,7 @@ export const mockRegistrations: Registration[] = [
     userId: '3',
     eventId: '2',
     status: 'waitlist',
+    registrationRole: 'attendee',
     checkedIn: false,
     checkedOut: false,
     feedbackSubmitted: false,
@@ -320,6 +398,7 @@ export const mockRegistrations: Registration[] = [
     userId: '2',
     eventId: '4',
     status: 'attended',
+    registrationRole: 'attendee',
     checkedIn: true,
     checkedOut: true,
     feedbackSubmitted: true,

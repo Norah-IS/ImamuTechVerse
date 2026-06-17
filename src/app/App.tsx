@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { LoginPage } from './components/LoginPage';
 import { PreferencesPage } from './components/PreferencesPage';
 import { HomePage } from './components/HomePage';
@@ -7,6 +8,9 @@ import { EventDetailsPage } from './components/EventDetailsPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserProfilePage } from './components/UserProfilePage';
 import { WaitlistDemo } from './components/WaitlistDemo';
+import { OrganizerScannerPage } from './components/OrganizerScannerPage';
+import { EventQRDisplayPage } from './components/EventQRDisplayPage';
+import { AIChatWidget } from './components/AIChatWidget';
 
 /** Guard for student-only pages */
 function StudentRoute({ children }: { children: React.ReactNode }) {
@@ -117,6 +121,26 @@ function AppRoutes() {
         }
       />
 
+      {/* Organizer scanner */}
+      <Route
+        path="/admin/scan"
+        element={
+          <AdminRoute>
+            <OrganizerScannerPage />
+          </AdminRoute>
+        }
+      />
+
+      {/* Event QR display screen */}
+      <Route
+        path="/admin/event/:id/qr"
+        element={
+          <AdminRoute>
+            <EventQRDisplayPage />
+          </AdminRoute>
+        }
+      />
+
       {/* Public demo page — no auth required */}
       <Route path="/waitlist-demo" element={<WaitlistDemo />} />
 
@@ -128,9 +152,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+
+      <LanguageProvider>
+        <AuthProvider>
+          <AppRoutes />
+          <AIChatWidget />
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

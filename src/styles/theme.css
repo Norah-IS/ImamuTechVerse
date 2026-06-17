@@ -1,86 +1,163 @@
 @custom-variant dark (&:is(.dark *));
 
+/* ─── Imamu University Brand Palette ─────────────────────────────────────────
+ *  Primary  (gold / mustard): #B7A362  darker: #99823F
+ *  Secondary (deep blue):     #045D84
+ *  Accent   (light blue):     #B3DDF5  mid:    #80BACE
+ *  Soft bg  (blue-grey):      #DFE7F4
+ *
+ *  Contrast notes (WCAG):
+ *    gold #B7A362 on white      → 2.34:1  (decorative only — use dark text ON it)
+ *    dark #1a2c3d on gold       → 5.46:1  ✓ AA  → --primary-foreground
+ *    white on deep blue #045D84 → 6.52:1  ✓ AAA → --secondary-foreground
+ *    deep blue on white         → 6.52:1  ✓ AAA → links / text-secondary
+ * ─────────────────────────────────────────────────────────────────────────── */
+
 :root {
   --font-size: 16px;
   --font-family: 'Tajawal', sans-serif;
-  --background: #F8F9FA;
-  --foreground: #212529;
+
+  /* ── Page canvas ── */
+  --background: #F5F7FA;
+  --foreground: #1a2c3d;
+
+  /* ── Cards / Popovers ── */
   --card: #ffffff;
-  --card-foreground: #212529;
+  --card-foreground: #1a2c3d;
   --popover: #ffffff;
-  --popover-foreground: #212529;
-  --primary: #1E2652;
-  --primary-foreground: #ffffff;
-  --secondary: #5C2D91;
-  --secondary-foreground: #ffffff;
-  --muted: #eef0f6;
-  --muted-foreground: #6C757D;
-  --accent: #eef0f8;
-  --accent-foreground: #1E2652;
+  --popover-foreground: #1a2c3d;
+
+  /* ── PRIMARY = Gold — buttons, headers, formal accents ── */
+  --primary: #B7A362;
+  --primary-foreground: #1a2c3d;   /* dark navy on gold  (contrast 5.5:1 ✓) */
+
+  /* ── SECONDARY = Deep blue — secondary buttons, prominent links ── */
+  --secondary: #045D84;
+  --secondary-foreground: #ffffff; /* white on deep blue (contrast 6.5:1 ✓) */
+
+  /* ── MUTED = Soft blue-grey — subtle backgrounds, disabled states ── */
+  --muted: #DFE7F4;
+  --muted-foreground: #3a5269;
+
+  /* ── ACCENT = Light blue — hover states, tags, chip backgrounds ── */
+  --accent: #B3DDF5;
+  --accent-foreground: #1a2c3d;
+
+  /* ── Destructive ── */
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #dee2e6;
+
+  /* ── Borders, inputs ── */
+  --border: #80BACE;
   --input: transparent;
-  --input-background: #f1f3f5;
-  --switch-background: #d1d5db;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: #00ADEF;
-  --chart-1: #1E2652;
-  --chart-2: #5C2D91;
-  --chart-3: #00ADEF;
-  --chart-4: #8C61AF;
-  --chart-5: #13193E;
+  --input-background: #DFE7F4;
+  --switch-background: #80BACE;
+
+  /* ── Focus ring ── */
+  --ring: #045D84;
+
+  /* ── Charts ── */
+  --chart-1: #B7A362;
+  --chart-2: #045D84;
+  --chart-3: #80BACE;
+  --chart-4: #99823F;
+  --chart-5: #B3DDF5;
+
   --radius: 0.5rem;
-  --sidebar: #f1f3f5;
-  --sidebar-foreground: #212529;
-  --sidebar-primary: #1E2652;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eef0f6;
-  --sidebar-accent-foreground: #212529;
-  --sidebar-border: #dee2e6;
-  --sidebar-ring: #00ADEF;
-  /* Nibras brand accent colors */
-  --nibras-cyan: #00ADEF;
-  --nibras-light-purple: #8C61AF;
-  --nibras-dark: #13193E;
+
+  /* ── Sidebar ── */
+  --sidebar: #DFE7F4;
+  --sidebar-foreground: #1a2c3d;
+  --sidebar-primary: #B7A362;
+  --sidebar-primary-foreground: #1a2c3d;
+  --sidebar-accent: #B3DDF5;
+  --sidebar-accent-foreground: #1a2c3d;
+  --sidebar-border: #80BACE;
+  --sidebar-ring: #045D84;
+
+  /* ── University brand tokens (also available as Tailwind utilities) ── */
+  --brand-gold: #B7A362;
+  --brand-gold-dark: #99823F;
+  --brand-blue: #045D84;
+  --brand-blue-light: #B3DDF5;
+  --brand-blue-mid: #80BACE;
+  --brand-blue-soft: #DFE7F4;
+
+  /* ── Legacy nibras tokens (remapped to new palette for compatibility) ── */
+  --nibras-cyan: #045D84;
+  --nibras-light-purple: #80BACE;
+  --nibras-dark: #1a2c3d;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* ── Page canvas ── */
+  --background: #0d1a26;
+  --foreground: #e8dfc4;
+
+  /* ── Cards / Popovers ── */
+  --card: #132030;
+  --card-foreground: #e8dfc4;
+  --popover: #132030;
+  --popover-foreground: #e8dfc4;
+
+  /* ── PRIMARY = Gold stays in dark mode ── */
+  --primary: #B7A362;
+  --primary-foreground: #0d1a26;   /* very dark on gold */
+
+  /* ── SECONDARY = lighter blue for dark mode visibility ── */
+  --secondary: #80BACE;
+  --secondary-foreground: #0d1a26;
+
+  /* ── MUTED ── */
+  --muted: #1a2d3e;
+  --muted-foreground: #7fa8c0;
+
+  /* ── ACCENT ── */
+  --accent: #1a3a52;
+  --accent-foreground: #B3DDF5;
+
+  /* ── Destructive ── */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* ── Borders, inputs ── */
+  --border: #1e3a52;
+  --input: #1a2d3e;
+  --input-background: #1a2d3e;
+  --switch-background: #2a4d6a;
+
+  /* ── Focus ring ── */
+  --ring: #B7A362;
+
+  /* ── Charts ── */
+  --chart-1: #B7A362;
+  --chart-2: #80BACE;
+  --chart-3: #B3DDF5;
+  --chart-4: #99823F;
+  --chart-5: #045D84;
+
+  /* ── Sidebar ── */
+  --sidebar: #0d1a26;
+  --sidebar-foreground: #e8dfc4;
+  --sidebar-primary: #B7A362;
+  --sidebar-primary-foreground: #0d1a26;
+  --sidebar-accent: #1a3a52;
+  --sidebar-accent-foreground: #B3DDF5;
+  --sidebar-border: #1e3a52;
+  --sidebar-ring: #B7A362;
+
+  /* ── Brand tokens (same across modes) ── */
+  --brand-gold: #B7A362;
+  --brand-gold-dark: #99823F;
+  --brand-blue: #045D84;
+  --brand-blue-light: #B3DDF5;
+  --brand-blue-mid: #80BACE;
+  --brand-blue-soft: #DFE7F4;
+
+  /* ── Legacy nibras tokens ── */
+  --nibras-cyan: #80BACE;
+  --nibras-light-purple: #B3DDF5;
+  --nibras-dark: #0d1a26;
 }
 
 @theme inline {
@@ -122,6 +199,14 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* University brand palette as Tailwind utilities */
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-dark: var(--brand-gold-dark);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-blue-light: var(--brand-blue-light);
+  --color-brand-blue-mid: var(--brand-blue-mid);
+  --color-brand-blue-soft: var(--brand-blue-soft);
 }
 
 @layer base {
@@ -134,11 +219,6 @@
     font-family: var(--font-family);
     direction: rtl;
   }
-
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
 
   html {
     font-size: var(--font-size);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Mail, X, Calendar, MapPin, Clock, Hash } from 'lucide-react';
-import { UniversityLogo } from './UniversityLogo';
+import { Logo } from './logo';
 
 interface EmailConfirmationModalProps {
   isOpen: boolean;
@@ -155,7 +155,8 @@ export function EmailConfirmationModal({
                 </div>
                 {/* Footer */}
                 <div className="flex items-center gap-2 pt-1">
-                  <UniversityLogo size={20} variant="icon" />
+                  <Logo variant="university" className="h-5 w-auto" />
+                  <Logo variant="project" className="h-4 w-auto opacity-70" />
                   <p className="text-xs text-muted-foreground">فريق Imamu TechVerse – جامعة الإمام</p>
                 </div>
               </div>

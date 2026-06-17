@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { User, mockUsersDB } from '../data/mockData';
 import { isUserBlocked } from '../services/emailService';
 import { getAbsenceCount } from '../services/absenceService';
+import { getActivityRecord, ActivityRecord } from '../services/activityService';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +14,8 @@ interface AuthContextType {
   updateUserInterests: (interests: string[]) => void;
   absenceCount: number;
   refreshAbsenceCount: () => void;
+  activityRecord: ActivityRecord | null;
+  refreshActivityRecord: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [hasCompletedPreferences, setHasCompletedPreferences] = useState(false);
   const [absenceCount, setAbsenceCount] = useState(0);
+  const [activityRecord, setActivityRecord] = useState<ActivityRecord | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -34,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setHasCompletedPreferences(savedPrefs === 'true');
         setAbsenceCount(getAbsenceCount(parsedUser.id));
+        setActivityRecord(getActivityRecord(parsedUser.id));
       }
     }
   }, []);
@@ -64,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const prefsCompleted = localStorage.getItem('preferencesCompleted') === 'true';
       setHasCompletedPreferences(prefsCompleted);
       setAbsenceCount(getAbsenceCount(foundUser.id));
+      setActivityRecord(getActivityRecord(foundUser.id));
     }
 
     return { success: true };
@@ -73,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setHasCompletedPreferences(false);
     setAbsenceCount(0);
+    setActivityRecord(null);
     localStorage.removeItem('currentUser');
     localStorage.removeItem('preferencesCompleted');
   };
@@ -96,9 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshAbsenceCount = () => {
-    if (user) {
-      setAbsenceCount(getAbsenceCount(user.id));
-    }
+    if (user) setAbsenceCount(getAbsenceCount(user.id));
+  };
+
+  const refreshActivityRecord = () => {
+    if (user) setActivityRecord(getActivityRecord(user.id));
   };
 
   return (
@@ -113,6 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUserInterests,
         absenceCount,
         refreshAbsenceCount,
+        activityRecord,
+        refreshActivityRecord,
       }}
     >
       {children}

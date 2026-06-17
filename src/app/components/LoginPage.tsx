@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Lock, Mail, ChevronLeft, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
-import { UniversityLogo, UniversityLogoWhite } from './UniversityLogo';
+import { Logo } from './logo';
+import { LanguageToggle } from './LanguageToggle';
+import { TopBar } from './PageShell';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +13,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const navigateAfterLogin = (role: 'student' | 'admin', hasPrefs: boolean) => {
@@ -59,7 +63,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
+    <div className="min-h-screen bg-background flex flex-col" dir="auto">
+      <TopBar />
+      <div className="flex flex-col md:flex-row flex-1">
       {/* Left side: Background Image & Branding */}
       <div className="md:w-1/2 relative hidden md:flex flex-col justify-between p-12 overflow-hidden">
         <div className="absolute inset-0 bg-primary/95 z-0">
@@ -71,25 +77,29 @@ export function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/80 to-transparent"></div>
         </div>
         
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="bg-white/20 backdrop-blur rounded-2xl p-2.5 border border-white/30 shadow-lg">
-            <UniversityLogoWhite size={48} />
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Logo variant="university" className="h-12 w-auto" />
+            <Logo variant="project" className="h-16 w-auto" />
           </div>
-          <h2 className="text-white font-bold text-xl leading-snug">جامعة الإمام محمد<br/>بن سعود الإسلامية</h2>
+          <LanguageToggle variant="light" />
         </div>
 
         <div className="relative z-10 text-white max-w-md">
           <h1 className="text-4xl font-black mb-4 leading-tight" style={{ color: '#00ADEF' }}>
-            نظام إدارة الفعاليات
+            {t('نظام إدارة الأنشطة', 'Activity Management')}
             <br />
             <span className="text-white">Imamu TechVerse</span>
           </h1>
           <p className="text-primary-foreground/80 text-lg leading-relaxed mb-8">
-            بوابة متكاملة لاكتشاف والتسجيل في الفعاليات الأكاديمية والتقنية والأنشطة الطلابية بكل سهولة.
+            {t(
+              'منصة متكاملة لاكتشاف والتسجيل في الأنشطة الأكاديمية والتقنية والاجتماعية بكل سهولة.',
+              'An integrated portal to discover and register for academic, technical, and social activities.'
+            )}
           </p>
           <div className="flex items-center gap-4 text-sm text-primary-foreground/70 bg-black/20 p-4 rounded-xl backdrop-blur-sm border border-white/10">
             <ShieldCheck className="w-6 h-6" style={{ color: '#00ADEF' }} />
-            <p>تسجيل دخول آمن وموحد لمنسوبي الجامعة والطلاب</p>
+            <p>{t('تسجيل دخول آمن وموحد لمنسوبي جامعة الامام محمد بن سعود الإسلامية ', 'Secure unified login for university members and students')}</p>
           </div>
         </div>
       </div>
@@ -99,21 +109,24 @@ export function LoginPage() {
         <div className="w-full max-w-md">
           
           <div className="md:hidden flex flex-col items-center text-center mb-8">
-            <div className="mb-4 p-3 bg-primary/5 rounded-3xl border border-primary/10 shadow-md">
-              <UniversityLogo size={64} variant="icon" />
-            </div>
+         
             <h1 className="text-2xl font-bold text-primary mb-1">Imamu TechVerse</h1>
             <p className="text-muted-foreground text-sm">جامعة الإمام محمد بن سعود الإسلامية</p>
           </div>
 
+          {/* Mobile language toggle */}
+          <div className="md:hidden flex justify-end mb-2">
+            <LanguageToggle variant="dark" />
+          </div>
+
           <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2 text-foreground">تسجيل الدخول</h2>
-            <p className="text-muted-foreground">أدخل بيانات الحساب الجامعي للمتابعة</p>
+            <h2 className="text-3xl font-bold mb-2 text-foreground">{t('تسجيل الدخول', 'Sign In')}</h2>
+            <p className="text-muted-foreground">{t('أدخل بيانات الحساب للمتابعة', 'Enter your university account credentials to continue')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">البريد الإلكتروني الجامعي</label>
+              <label className="block text-sm font-medium text-foreground mb-2">{t('البريد الإلكتروني الجامعي', 'University Email')}</label>
               <div className="relative group">
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input
@@ -128,7 +141,7 @@ export function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">كلمة المرور</label>
+              <label className="block text-sm font-medium text-foreground mb-2">{t('كلمة المرور', 'Password')}</label>
               <div className="relative group">
                 <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input
@@ -168,7 +181,7 @@ export function LoginPage() {
               disabled={isLoading}
               className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] font-bold text-lg disabled:opacity-70 flex items-center justify-center gap-2 group shadow-lg shadow-primary/20"
             >
-              {isLoading ? 'جاري التحقق...' : 'دخول'}
+              {isLoading ? t('جاري التحقق...', 'Verifying...') : t('دخول', 'Sign In')}
               {!isLoading && <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />}
             </button>
           </form>
@@ -176,12 +189,12 @@ export function LoginPage() {
           {/* Credentials hint */}
           <div className="mt-6 p-4 bg-muted/50 rounded-xl border border-border text-xs text-muted-foreground">
             <p className="font-bold mb-2 text-foreground">بيانات تجريبية:</p>
-            <p>طالب: <span className="font-medium text-foreground">ahmed.ali@imamu.edu.sa</span> / <span className="font-medium text-foreground">student123</span></p>
-            <p className="mt-1">مسؤول: <span className="font-medium text-foreground">sarah.admin@imamu.edu.sa</span> / <span className="font-medium text-foreground">admin123</span></p>
+            <p>زائر: <span className="font-medium text-foreground">ahmed.ali@imamu.edu.sa</span> / <span className="font-medium text-foreground">student123</span></p>
+            <p className="mt-1">منظّم: <span className="font-medium text-foreground">sarah.admin@imamu.edu.sa</span> / <span className="font-medium text-foreground">admin123</span></p>
           </div>
 
           <div className="mt-6 pt-6 border-t border-border/60">
-            <p className="text-center text-sm text-muted-foreground font-medium mb-4">دخول تجريبي سريع</p>
+            <p className="text-center text-sm text-muted-foreground font-medium mb-4">{t('دخول تجريبي سريع', 'Quick Demo Login')}</p>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => handleDemoLogin('student')}
@@ -189,9 +202,9 @@ export function LoginPage() {
                 className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
               >
                 <div className="w-10 h-10 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                  <UniversityLogo size={28} variant="icon" className="group-hover:scale-110 transition-transform" />
+                  <ShieldCheck className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
-                <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">بوابة الطالب</span>
+                <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{t('بوابة الزائر', 'Visitor Portal')}</span>
               </button>
               <button
                 onClick={() => handleDemoLogin('admin')}
@@ -201,11 +214,12 @@ export function LoginPage() {
                 <div className="w-10 h-10 rounded-full bg-muted group-hover:bg-secondary/10 flex items-center justify-center transition-colors">
                   <ShieldCheck className="w-5 h-5 text-muted-foreground group-hover:text-secondary transition-colors" />
                 </div>
-                <span className="text-sm font-bold text-foreground group-hover:text-secondary transition-colors">بوابة الإدارة</span>
+                <span className="text-sm font-bold text-foreground group-hover:text-secondary transition-colors">{t('بوابة المنظّم', 'Organizer Portal')}</span>
               </button>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

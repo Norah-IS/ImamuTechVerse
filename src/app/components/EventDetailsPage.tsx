@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockEvents, mockRegistrations, mockUsersDB, Registration } from '../data/mockData';
+import { mockEvents, mockRegistrations, mockUsersDB, Registration, AudienceGroup } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import {
   Calendar,
@@ -20,12 +20,22 @@ import {
   QrCode,
   ChevronRight,
 } from 'lucide-react';
-import { UniversityLogo } from './UniversityLogo';
+import { QRCodeSVG } from 'qrcode.react';
+import { Toaster } from 'sonner';
+import { TopBar, PageFooter } from './PageShell';
+import { Logo } from './logo';
 import { EmailConfirmationModal } from './EmailConfirmationModal';
 import { CheckInModal } from './CheckInModal';
 import { CertificateModal } from './CertificateModal';
+import { AIEventRelevance } from './AIEventRelevance';
+import { AICheckinMessage } from './AICheckinMessage';
 import { sendRegistrationConfirmation, sendWaitlistConfirmation, sendWaitlistPromotion, isUserBlocked } from '../services/emailService';
 import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
+import { recordActivity } from '../services/activityService';
+import { ACTIVITY_LEVELS } from '../data/activityLevels';
+import { isEventQRActive } from '../services/eventQRService';
+import { useLanguage } from '../context/LanguageContext';
+import { toast } from 'sonner';
 
 interface EventDetailsPageProps {
   adminView?: boolean;
@@ -34,7 +44,8 @@ interface EventDetailsPageProps {
 export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, refreshAbsenceCount } = useAuth();
+  const { user, refreshAbsenceCount, refreshActivityRecord, activityRecord } = useAuth();
+  const { t, lang, toggleLang } = useLanguage();
   const [registrations, setRegistrations] = useState(mockRegistrations);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [rating, setRating] = useState(0);
@@ -51,6 +62,9 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
   // CheckIn Modal
   const [showCheckInModal, setShowCheckInModal] = useState(false);
 
+  // AI post-checkin message
+  const [showAICheckin, setShowAICheckin] = useState(false);
+
   // Certificate Modal
   const [showCertModal, setShowCertModal] = useState(false);
 
@@ -61,6 +75,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
 
   const isBlocked = user ? isUserBlocked(user.id) : false;
   const absenceCount = user ? getAbsenceCount(user.id) : 0;
+  const qrActive = event ? isEventQRActive({ id: event.id, status: event.status, date: event.date, time: event.time }) : false;
 
   if (!event) {
     return (
@@ -68,8 +83,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
         <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
           <AlertCircle className="w-10 h-10 text-muted-foreground" />
         </div>
-        <h2 className="text-2xl font-bold mb-4 text-foreground">عذراً، الفعالية غير موجودة</h2>
-        <p className="text-muted-foreground mb-8 text-center max-w-sm">يبدو أن الفعالية التي تبحث عنها قد تم إلغاؤها أو إزالة الرابط الخاص بها.</p>
+        <h2 className="text-2xl font-bold mb-4 text-foreground">عذراً، النشاط غير موجود</h2>
+        <p className="text-muted-foreground mb-8 text-center max-w-sm">يبدو أن النشاط الذي تبحث عنه قد تم إلغاؤه أو إزالة الرابط الخاص به.</p>
         <button
           onClick={() => navigate(adminView ? '/admin' : '/')}
           className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all flex items-center gap-2"
@@ -90,10 +105,26 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
   const checkedIn = myRegistration?.checkedIn || false;
   const checkedOut = myRegistration?.checkedOut || false;
 
-  const handleRegister = () => {
+  const AUDIENCE_LABELS: Record<AudienceGroup, string> = {
+    students:             'الطلبة',
+    teaching_staff:       'أعضاء هيئة التدريس',
+    administrative_staff: 'الكوادر الإدارية',
+    researchers:          'الباحثين',
+    alumni:               'الخريجين',
+  };
+
+  const doRegister = (role: 'attendee' | 'volunteer') => {
     if (isBlocked) {
       alert('لا يمكنك التسجيل حاليًا. تم حظر حسابك بسبب تجاوز حد الغيابات.');
       return;
+    }
+    if (event.audienceType === 'restricted' && event.allowedAudience.length > 0) {
+      const userGroup: AudienceGroup = user?.role === 'student' ? 'students' : 'teaching_staff';
+      if (!event.allowedAudience.includes(userGroup)) {
+        const allowed = event.allowedAudience.map(g => AUDIENCE_LABELS[g]).join('، ');
+        alert(`هذا النشاط مخصص لـ: ${allowed} فقط.`);
+        return;
+      }
     }
     const newId = `r${Date.now()}`;
     const isWaitlist = isFull;
@@ -102,6 +133,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
       userId: user!.id,
       eventId: event.id,
       status: isWaitlist ? 'waitlist' : 'registered',
+      registrationRole: role,
       checkedIn: false,
       checkedOut: false,
       feedbackSubmitted: false,
@@ -172,6 +204,26 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
           : r
       )
     );
+
+    setShowAICheckin(true);
+
+    if (user && event.activityType) {
+      const { previousLevelIndex, levelChanged, record } = recordActivity(user.id, {
+        eventId: event.id,
+        eventTitle: event.title,
+        eventDate: event.date,
+        activityType: event.activityType,
+      });
+      refreshActivityRecord?.();
+
+      if (levelChanged) {
+        const newLevel = ACTIVITY_LEVELS[record.levelIndex];
+        toast.success(`${newLevel.titleAr}`, {
+          description: `${newLevel.titleEn}  ·  ${record.totalHours.toFixed(1)} ساعة موثّقة`,
+          duration: 7000,
+        });
+      }
+    }
   };
 
   // Called when user accepts being marked absent (Req 27)
@@ -237,7 +289,9 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F4F6F9] font-sans flex flex-col">
+      <TopBar />
+      <Toaster position="top-center" richColors />
       <header className="bg-primary border-b-4 border-secondary sticky top-0 z-20 shadow-xl shadow-primary/10">
         <div className="max-w-4xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
@@ -249,11 +303,22 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
               <ArrowRight className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
+              <button
+                onClick={toggleLang}
+                className="hidden sm:flex items-center px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg transition-all"
+              >
+                {lang === 'ar' ? 'EN' : 'ع'}
+              </button>
               <h1 className="text-white text-base md:text-lg font-bold leading-tight hidden sm:block">
-                {adminView ? 'تفاصيل الفعالية (إداري)' : 'تفاصيل الفعالية'}
+                {t('تفاصيل النشاط', 'Activity Details')}{adminView ? t(' (إداري)', ' (Admin)') : ''}
               </h1>
-              <div className="bg-white rounded-xl p-1.5 shadow-inner">
-                <UniversityLogo size={30} variant="icon" />
+              <div className="flex items-center gap-1.5">
+                <div className="bg-white rounded-xl p-1.5 shadow-inner">
+                  <Logo variant="university" className="h-7 w-auto" />
+                </div>
+                <div className="bg-white/10 rounded-xl p-1.5 border border-white/10 hidden sm:block">
+                  <Logo variant="project" className="h-6 w-auto" />
+                </div>
               </div>
             </div>
           </div>
@@ -280,6 +345,23 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                 <span className="px-4 py-1.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg border border-white/20 backdrop-blur">
                   {event.category}
                 </span>
+                <span className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg border border-white/20 backdrop-blur ${
+                  event.audienceType === 'restricted'
+                    ? 'bg-amber-700/90 text-white'
+                    : 'bg-slate-600/80 text-white'
+                }`}>
+                  {event.audienceType === 'restricted' && event.allowedAudience.length > 0
+                    ? event.allowedAudience.map(g => ({
+                        students: 'الطلبة', teaching_staff: 'أعضاء التدريس',
+                        administrative_staff: 'الإداريون', researchers: 'الباحثون', alumni: 'الخريجون',
+                      }[g] ?? g)).join('، ') + ' فقط'
+                    : 'عام — منسوبو الجامعة'}
+                </span>
+                {event.needsVolunteers && (
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg border border-white/20 backdrop-blur bg-teal-600/90 text-white">
+                    يقبل متطوعين
+                  </span>
+                )}
                 {statusBadge()}
                 {isRegistered && (
                   <span className="px-4 py-1.5 bg-secondary text-white rounded-xl text-sm font-bold shadow-lg border border-white/20 flex items-center gap-2 backdrop-blur">
@@ -314,17 +396,27 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                 <section>
                   <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-foreground">
                     <span className="w-2 h-6 bg-secondary rounded-full"></span>
-                    نبذة عن الفعالية
+                    {t('نبذة عن النشاط', 'About This Activity')}
                   </h3>
                   <p className="text-muted-foreground leading-relaxed text-base">
                     {event.description}
                   </p>
                 </section>
 
+                {/* Feature 2: AI relevance card — visible to visitors only */}
+                {!adminView && user && user.role !== 'admin' && (
+                  <AIEventRelevance
+                    event={event}
+                    user={user}
+                    activityRecord={activityRecord ?? null}
+                    registeredCount={myRegistration && myRegistration.status !== 'cancelled' ? 1 : 0}
+                  />
+                )}
+
                 <section className="bg-muted/30 p-6 rounded-3xl border border-border/50">
                   <h3 className="text-lg font-bold mb-6 text-foreground flex items-center gap-2">
                     <Info className="w-5 h-5 text-primary" />
-                    تفاصيل الفعالية
+                    {t('تفاصيل النشاط', 'Activity Details')}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="flex items-start gap-4">
@@ -332,7 +424,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                         <Calendar className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-muted-foreground mb-1">التاريخ</p>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">{t('التاريخ', 'Date')}</p>
                         <p className="font-bold text-foreground">{event.date}</p>
                       </div>
                     </div>
@@ -342,7 +434,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                         <Clock className="w-6 h-6 text-secondary" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-muted-foreground mb-1">الوقت</p>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">{t('الوقت', 'Time')}</p>
                         <p className="font-bold text-foreground">{event.time}</p>
                       </div>
                     </div>
@@ -352,7 +444,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                         <MapPin className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-muted-foreground mb-1">الموقع / القاعة</p>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">{t('الموقع / القاعة', 'Location / Hall')}</p>
                         <p className="font-bold text-foreground">{event.location}</p>
                       </div>
                     </div>
@@ -362,7 +454,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                         <Building2 className="w-6 h-6 text-secondary" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-muted-foreground mb-1">الكلية / الجهة المنظمة</p>
+                        <p className="text-sm font-bold text-muted-foreground mb-1">{t('الكلية / الجهة المنظمة', 'College / Organizer')}</p>
                         <p className="font-bold text-foreground">{event.college} — {event.organizer}</p>
                       </div>
                     </div>
@@ -424,16 +516,38 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   <div className="space-y-3 pt-4 border-t border-border">
                     {/* Register / Waitlist button */}
                     {!adminView && !myRegistration && event.status === 'upcoming' && !isBlocked && (
-                      <button
-                        onClick={handleRegister}
-                        className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 ${
-                          isFull
-                            ? 'bg-secondary text-white hover:bg-secondary/90 shadow-secondary/20'
-                            : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
-                        }`}
-                      >
-                        {isFull ? 'الانضمام للانتظار' : 'التسجيل الآن'}
-                      </button>
+                      event.needsVolunteers && !isFull ? (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground text-center font-medium">اختر طريقة المشاركة</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => doRegister('attendee')}
+                              className="py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 text-sm flex flex-col items-center gap-0.5"
+                            >
+                              <span>حضور</span>
+                              <span className="text-[10px] font-normal opacity-80">Attendee</span>
+                            </button>
+                            <button
+                              onClick={() => doRegister('volunteer')}
+                              className="py-3 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 text-sm flex flex-col items-center gap-0.5"
+                            >
+                              <span>متطوع</span>
+                              <span className="text-[10px] font-normal opacity-80">Volunteer</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => doRegister('attendee')}
+                          className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 ${
+                            isFull
+                              ? 'bg-secondary text-white hover:bg-secondary/90 shadow-secondary/20'
+                              : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'
+                          }`}
+                        >
+                          {isFull ? t('الانضمام للانتظار', 'Join Waitlist') : t('التسجيل الآن', 'Register Now')}
+                        </button>
+                      )
                     )}
 
                     {/* ── مسجّل ولم يحضر بعد ── */}
@@ -443,7 +557,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                           onClick={handleCancelRegistration}
                           className="w-full py-3.5 bg-white border-2 border-border text-destructive font-bold rounded-xl hover:bg-destructive/5 hover:border-destructive/30 transition-all text-sm"
                         >
-                          إلغاء التسجيل
+                          {t('إلغاء التسجيل', 'Cancel Registration')}
                         </button>
 
                         <button
@@ -451,7 +565,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                           className="w-full py-3.5 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-md flex items-center justify-center gap-2"
                         >
                           <QrCode className="w-5 h-5" />
-                          مسح رمز QR للحضور
+                          {t('مسح رمز QR للحضور', 'Scan QR to Check In')}
                         </button>
                       </>
                     )}
@@ -536,6 +650,28 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                     )}
                   </div>
                 </div>
+
+                {/* QR code ticket — shown to registered visitor */}
+                {!adminView && (isRegistered || isWaitlisted) && myRegistration && (
+                  <div className="bg-card border-2 border-secondary/30 rounded-3xl p-5 shadow-md text-center">
+                    <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">تذكرة الدخول</p>
+                    <p className="text-sm font-bold text-foreground mb-4 truncate">{event.title}</p>
+                    <div className="flex justify-center mb-4">
+                      <div className="p-3 bg-white rounded-2xl shadow-inner border border-border">
+                        <QRCodeSVG
+                          value={`IMAMU:${event.id}:${myRegistration.id}:${user?.id}`}
+                          size={160}
+                          level="M"
+                          includeMargin={false}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">{myRegistration.id}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isWaitlisted ? '⏳ في قائمة الانتظار' : '✅ مسجّل — اعرض هذا الكود عند الدخول'}
+                    </p>
+                  </div>
+                )}
 
                 {/* Attendance stats (always visible) */}
                 <div className="bg-muted/40 border border-border rounded-2xl p-4">
@@ -717,8 +853,15 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
         onClose={() => setShowCheckInModal(false)}
         onSuccess={handleCheckInSuccess}
         onAcceptAbsent={handleAcceptAbsent}
+        eventId={event.id}
         eventTitle={event.title}
         eventLocation={event.location}
+        isQRActive={qrActive}
+        eventDate={event.date}
+        eventTime={event.time}
+        eventStatus={event.status}
+        eventLat={event.lat}
+        eventLng={event.lng}
       />
 
       {/* Certificate Modal (Req 35) */}
@@ -730,6 +873,18 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
           eventTitle={event.title}
           eventDate={event.date}
           studentId={user.studentId}
+        />
+      )}
+      <PageFooter />
+
+      {/* Feature 3: AI post-checkin encouragement message */}
+      {user && user.role !== 'admin' && (
+        <AICheckinMessage
+          isOpen={showAICheckin}
+          onClose={() => setShowAICheckin(false)}
+          attendedEvent={event}
+          user={user}
+          activityRecord={activityRecord ?? null}
         />
       )}
     </div>

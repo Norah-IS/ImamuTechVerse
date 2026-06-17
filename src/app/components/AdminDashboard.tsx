@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { mockEvents, mockRegistrations, mockAttendanceData, Event, colleges, interests } from '../data/mockData';
+import { useLanguage } from '../context/LanguageContext';
+import { mockEvents, mockRegistrations, mockAttendanceData, Event, ActivityType, AudienceGroup, colleges, interests } from '../data/mockData';
 import {
   Calendar,
   Users,
@@ -32,8 +33,17 @@ import {
   Building2,
   ListChecks,
   Download,
+  Wrench,
+  Mic2,
+  Trophy,
+  Heart,
+  LayoutGrid,
+  MessageSquare,
+  BookOpen,
+  Sparkles,
+  ScanLine,
 } from 'lucide-react';
-import { UniversityLogo } from './UniversityLogo';
+import { Logo } from './logo';
 import {
   getEmailLogs,
   EmailLog,
@@ -46,11 +56,12 @@ import {
 import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
 import { autoIssueCertificatesForEvent, getIssuedCerts, markCertIssued } from '../services/certificateService';
 import { CertificateModal } from './CertificateModal';
+import { TopBar, PageFooter } from './PageShell';
 
 // ─── Local event storage (CRUD) ───────────────────────────────────────────────
 const EVENTS_STORAGE_KEY = 'imamu_events';
 
-function getStoredEvents(): Event[] {
+export function getStoredEvents(): Event[] {
   try {
     const stored = localStorage.getItem(EVENTS_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
@@ -74,6 +85,18 @@ const MOCK_STUDENTS = [
   { id: '8', name: 'ريم سلطان العنزي', email: 'r.anazi@imamu.edu.sa', studentId: '2024008', college: 'كلية العلوم' },
 ];
 
+// ─── Activity types for step-1 selector ──────────────────────────────────────
+const ACTIVITY_TYPES: { value: ActivityType; icon: React.ElementType; color: string; bg: string }[] = [
+  { value: 'ورشة عمل',       icon: Wrench,        color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200 hover:border-blue-400' },
+  { value: 'محاضرة',         icon: Mic2,          color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200 hover:border-purple-400' },
+  { value: 'مسابقة',         icon: Trophy,        color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200 hover:border-yellow-400' },
+  { value: 'يوم تطوعي',      icon: Heart,         color: 'text-red-600',    bg: 'bg-red-50 border-red-200 hover:border-red-400' },
+  { value: 'معرض',           icon: LayoutGrid,    color: 'text-green-600',  bg: 'bg-green-50 border-green-200 hover:border-green-400' },
+  { value: 'ندوة',           icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200 hover:border-indigo-400' },
+  { value: 'دورة تدريبية',   icon: BookOpen,      color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200 hover:border-orange-400' },
+  { value: 'فعالية ترفيهية', icon: Sparkles,      color: 'text-pink-600',   bg: 'bg-pink-50 border-pink-200 hover:border-pink-400' },
+];
+
 // ─── Blank event template ─────────────────────────────────────────────────────
 const blankEvent = (): Omit<Event, 'id'> => ({
   title: '',
@@ -82,6 +105,10 @@ const blankEvent = (): Omit<Event, 'id'> => ({
   time: '',
   location: '',
   category: 'تقني',
+  activityType: 'ورشة عمل',
+  needsVolunteers: false,
+  audienceType: 'general' as const,
+  allowedAudience: [] as AudienceGroup[],
   capacity: 50,
   registeredCount: 0,
   waitlistCount: 0,
@@ -133,12 +160,14 @@ function getEmailTypeIcon(type: EmailLog['type']) {
 // ─── Component ────────────────────────────────────────────────────────────────
 export function AdminDashboard() {
   const { user, logout } = useAuth();
+  const { lang, toggleLang, t } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'attendance' | 'reports' | 'notifications' | 'users'>('overview');
 
   // Events CRUD state
   const [events, setEvents] = useState<Event[]>(getStoredEvents());
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createStep, setCreateStep] = useState<1 | 2>(1);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [eventForm, setEventForm] = useState<Omit<Event, 'id'>>(blankEvent());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -193,6 +222,7 @@ export function AdminDashboard() {
   const openCreateModal = () => {
     setEventForm(blankEvent());
     setEditingEvent(null);
+    setCreateStep(1);
     setShowCreateModal(true);
   };
 
@@ -205,6 +235,10 @@ export function AdminDashboard() {
       time: event.time,
       location: event.location,
       category: event.category,
+      activityType: event.activityType,
+      needsVolunteers: event.needsVolunteers,
+      audienceType: event.audienceType,
+      allowedAudience: event.allowedAudience,
       capacity: event.capacity,
       registeredCount: event.registeredCount,
       waitlistCount: event.waitlistCount,
@@ -214,12 +248,13 @@ export function AdminDashboard() {
       status: event.status,
       requiresFeedback: event.requiresFeedback,
     });
+    setCreateStep(2);
     setShowCreateModal(true);
   };
 
   const handleSaveEvent = () => {
     if (!eventForm.title || !eventForm.date || !eventForm.location) {
-      alert('يرجى ملء الحقول الإلزامية: اسم الفعالية، التاريخ، والموقع.');
+      alert('يرجى ملء الحقول الإلزامية: اسم النشاط، التاريخ، والموقع.');
       return;
     }
 
@@ -308,10 +343,10 @@ export function AdminDashboard() {
     setBlockedUsers(getBlockedUsers());
 
     if (wasBlocked) {
-      alert(`⚠️ تم حظر الطالب "${entry.studentName}" تلقائياً لمدة شهر بسبب تجاوز حد الغيابات (3 غيابات). تم إرسال إشعار تفصيلي للطالب.`);
+      alert(`⚠️ تم حجب الزائر "${entry.studentName}" تلقائياً لمدة شهر بسبب تجاوز حد الغيابات (3 غيابات). تم إرسال إشعار تفصيلي.`);
     } else {
       const count = getAbsenceCount(entry.userId);
-      alert(`تم تسجيل الطالب "${entry.studentName}" غائباً. إجمالي غياباته: ${count}/3. تم إرسال تحذير بريدي.`);
+      alert(`تم تسجيل الزائر "${entry.studentName}" غائباً. إجمالي غياباته: ${count}/3. تم إرسال تحذير بريدي.`);
     }
   };
 
@@ -363,39 +398,143 @@ export function AdminDashboard() {
 
   // ─── Generate Report ──────────────────────────────────────────────────────────
   const handleGenerateReport = () => {
-    const reportData = events.map(event => {
-      const eventRegs = mockRegistrations.filter(r => r.eventId === event.id);
-      const attendedCount = eventRegs.filter(r => r.status === 'attended').length;
-      const feedbackCount = eventRegs.filter(r => r.feedbackSubmitted).length;
-      return {
-        eventId: event.id,
-        title: event.title,
-        date: event.date,
-        registered: event.registeredCount,
-        capacity: event.capacity,
-        attended: attendedCount,
-        feedback: feedbackCount,
-        attendanceRate: event.registeredCount > 0 ? Math.round((attendedCount / event.registeredCount) * 100) : 0,
-      };
+    const isEn = lang === 'en';
+    const dir  = isEn ? 'ltr' : 'rtl';
+
+    const rows = events.map(event => {
+      const regs          = mockRegistrations.filter(r => r.eventId === event.id);
+      const attendedCount = regs.filter(r => r.status === 'attended').length;
+      const feedbackCount = regs.filter(r => r.feedbackSubmitted).length;
+      const attRate       = event.registeredCount > 0 ? Math.round((attendedCount / event.registeredCount) * 100) : 0;
+      const fbRate        = attendedCount > 0 ? Math.round((feedbackCount / attendedCount) * 100) : 0;
+      return { event, regs: event.registeredCount, attended: attendedCount, feedback: feedbackCount, attRate, fbRate };
     });
-    console.log('Report generated:', reportData);
-    alert(`تم توليد التقرير بنجاح!\n\nملخص:\n- إجمالي الفعاليات: ${totalEvents}\n- إجمالي التسجيلات: ${totalRegistrations}\n- إجمالي الحضور: ${totalAttendees}\n- معدل الحضور: ${totalRegistrations > 0 ? Math.round((totalAttendees / totalRegistrations) * 100) : 0}%`);
+
+    const overallAttRate = totalRegistrations > 0 ? Math.round((totalAttendees / totalRegistrations) * 100) : 0;
+    const now = new Date().toLocaleDateString(isEn ? 'en-US' : 'ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const html = `<!DOCTYPE html>
+<html dir="${dir}" lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<title>${isEn ? 'Activities Report — Imamu TechVerse' : 'تقرير الأنشطة — Imamu TechVerse'}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: ${isEn ? "'Segoe UI', Arial, sans-serif" : "'Tajawal', 'Segoe UI', Arial, sans-serif"}; direction: ${dir}; color: #1a1a2e; background: #fff; padding: 32px; font-size: 13px; }
+  .header { display: flex; align-items: center; gap: 20px; border-bottom: 4px solid #00ADEF; padding-bottom: 20px; margin-bottom: 24px; }
+  .header-text h1 { font-size: 22px; font-weight: 900; color: #13193E; }
+  .header-text p  { font-size: 12px; color: #666; margin-top: 4px; }
+  .meta { display: flex; gap: 32px; background: #f8f9fb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
+  .meta-item label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .meta-item .val  { font-size: 24px; font-weight: 900; color: #13193E; }
+  .section-title { font-size: 14px; font-weight: 800; color: #13193E; border-${isEn ? 'left' : 'right'}: 4px solid #00ADEF; padding-${isEn ? 'left' : 'right'}: 12px; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+  thead tr { background: #13193E; color: #fff; }
+  th { padding: 10px 14px; font-size: 12px; font-weight: 700; text-align: ${isEn ? 'left' : 'right'}; }
+  td { padding: 9px 14px; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+  tr:nth-child(even) { background: #f8f9fb; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-green  { background: #d1fae5; color: #065f46; }
+  .badge-blue   { background: #dbeafe; color: #1e40af; }
+  .badge-orange { background: #ffedd5; color: #9a3412; }
+  .badge-gray   { background: #f3f4f6; color: #374151; }
+  .footer { text-align: center; color: #aaa; font-size: 11px; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 8px; }
+  @media print { body { padding: 16px; } .no-print { display: none; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="width:56px;height:56px;background:#13193E;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <span style="color:#00ADEF;font-weight:900;font-size:18px">IT</span>
+  </div>
+  <div class="header-text">
+    <h1>Imamu TechVerse — ${isEn ? 'Activities Report' : 'تقرير الأنشطة'}</h1>
+    <p>${isEn ? 'Imam Mohammad Ibn Saud Islamic University' : 'جامعة الإمام محمد بن سعود الإسلامية'}</p>
+    <p style="margin-top:6px;color:#00ADEF;font-size:11px">${isEn ? 'Generated:' : 'تاريخ الإصدار:'} ${now}</p>
+  </div>
+  <button class="no-print" onclick="window.print()" style="margin-${isEn ? 'left' : 'right'}:auto;padding:10px 24px;background:#13193E;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">
+    ${isEn ? '🖨 Print / Save PDF' : '🖨 طباعة / حفظ PDF'}
+  </button>
+</div>
+
+<!-- Summary -->
+<div class="meta">
+  ${[
+    { label: isEn ? 'Total Activities' : 'إجمالي الأنشطة', val: totalEvents },
+    { label: isEn ? 'Total Registrations' : 'إجمالي التسجيلات', val: totalRegistrations },
+    { label: isEn ? 'Total Attendees' : 'إجمالي الحاضرين', val: totalAttendees },
+    { label: isEn ? 'Avg Attendance Rate' : 'معدل الحضور', val: overallAttRate + '%' },
+  ].map(s => `<div class="meta-item"><label>${s.label}</label><div class="val">${s.val}</div></div>`).join('')}
+</div>
+
+<!-- Detailed table -->
+<div class="section-title">${isEn ? 'Detailed Activity Report' : 'تفاصيل الأنشطة'}</div>
+<table>
+  <thead>
+    <tr>
+      <th>${isEn ? '#' : '#'}</th>
+      <th>${isEn ? 'Activity Name' : 'اسم النشاط'}</th>
+      <th>${isEn ? 'Type' : 'النوع'}</th>
+      <th>${isEn ? 'Date' : 'التاريخ'}</th>
+      <th>${isEn ? 'Capacity' : 'السعة'}</th>
+      <th>${isEn ? 'Registered' : 'المسجّلون'}</th>
+      <th>${isEn ? 'Attended' : 'الحاضرون'}</th>
+      <th>${isEn ? 'Attendance %' : 'نسبة الحضور'}</th>
+      <th>${isEn ? 'Feedback %' : 'نسبة التقييم'}</th>
+      <th>${isEn ? 'Status' : 'الحالة'}</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:700;max-width:200px">${r.event.title}</td>
+      <td>${r.event.activityType}</td>
+      <td>${r.event.date}</td>
+      <td>${r.event.capacity}</td>
+      <td>${r.regs}</td>
+      <td>${r.attended}</td>
+      <td><span class="badge ${r.attRate >= 75 ? 'badge-green' : r.attRate >= 50 ? 'badge-blue' : 'badge-orange'}">${r.attRate}%</span></td>
+      <td><span class="badge ${r.fbRate >= 75 ? 'badge-green' : r.fbRate >= 50 ? 'badge-blue' : 'badge-gray'}">${r.fbRate}%</span></td>
+      <td><span class="badge ${r.event.status === 'completed' ? 'badge-green' : r.event.status === 'upcoming' ? 'badge-blue' : 'badge-gray'}">
+        ${r.event.status === 'completed' ? (isEn ? 'Completed' : 'مكتمل') : r.event.status === 'upcoming' ? (isEn ? 'Upcoming' : 'قادم') : r.event.status === 'ongoing' ? (isEn ? 'Ongoing' : 'جارٍ') : (isEn ? 'Cancelled' : 'ملغى')}
+      </span></td>
+    </tr>`).join('')}
+  </tbody>
+</table>
+
+<div class="footer">
+  Imamu TechVerse &nbsp;·&nbsp; ${isEn ? 'Imam Mohammad Ibn Saud Islamic University' : 'جامعة الإمام محمد بن سعود الإسلامية'} &nbsp;·&nbsp; ${now}
+</div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=1100,height=800,scrollbars=yes');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F4F6F9] font-sans flex flex-col">
+      <TopBar />
       {/* ─── Header ─── */}
-      <header className="bg-[#13193E] border-b-4 border-secondary sticky top-0 z-20 shadow-xl shadow-primary/5">
+      <header className="bg-[#13193E] border-b-4 border-[#00ADEF] sticky top-0 z-20 shadow-xl shadow-black/20">
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="bg-white rounded-xl p-1.5 shadow-inner relative">
-                <UniversityLogo size={36} variant="icon" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-secondary rounded-full border-2 border-[#13193E]"></div>
+              <div className="flex items-center gap-2">
+                <div className="bg-white rounded-xl p-1.5 shadow-inner">
+                  <Logo variant="university" className="h-9 w-auto" />
+                </div>
+                <div className="bg-white/10 rounded-xl px-2 py-1.5 border border-white/10 hidden sm:block">
+                  <Logo variant="project" className="h-7 w-auto" />
+                </div>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-white text-lg font-bold leading-tight">بوابة الإدارة | Imamu TechVerse</h1>
-                <p className="text-xs font-semibold" style={{ color: '#00ADEF' }}>جامعة الإمام محمد بن سعود الإسلامية</p>
+                <h1 className="text-white text-lg font-bold leading-tight">{t('بوابة المنظّم', 'Organizer Portal')} | Imamu TechVerse</h1>
+                <p className="text-xs font-semibold" style={{ color: '#00ADEF' }}>{t('جامعة الإمام محمد بن سعود الإسلامية', 'Imam Mohammad Ibn Saud Islamic University')}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 sm:gap-6">
@@ -405,9 +544,24 @@ export function AdminDashboard() {
                 </div>
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-bold text-white leading-none">{user?.name}</p>
-                  <p className="text-xs text-white/70 mt-1">مدير النظام</p>
+                  <p className="text-xs text-white/70 mt-1">{t('منظّم الفعاليات', 'Organizer')}</p>
                 </div>
               </div>
+              <button
+                onClick={toggleLang}
+                className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg transition-all"
+                title="Switch language"
+              >
+                {lang === 'ar' ? 'EN' : 'ع'}
+              </button>
+              <button
+                onClick={() => navigate('/admin/scan')}
+                className="flex items-center gap-2 px-3 py-2 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm shadow-md"
+                title="ماسح الحضور"
+              >
+                <ScanLine className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('ماسح الحضور', 'Scan QR')}</span>
+              </button>
               <button
                 onClick={handleLogout}
                 className="w-10 h-10 flex items-center justify-center hover:bg-destructive/20 text-white hover:text-destructive rounded-xl transition-all"
@@ -424,12 +578,12 @@ export function AdminDashboard() {
         {/* ─── Navigation Tabs ─── */}
         <div className="bg-card rounded-2xl shadow-sm border border-border p-2 mb-8 flex overflow-x-auto gap-1">
           {[
-            { id: 'overview', icon: BarChart3, label: 'لوحة القيادة' },
-            { id: 'events', icon: Calendar, label: 'إدارة الفعاليات' },
-            { id: 'attendance', icon: ListChecks, label: 'الحضور والغياب' },
-            { id: 'reports', icon: FileText, label: 'التقارير' },
-            { id: 'notifications', icon: Bell, label: 'مركز الإشعارات', badge: emailLogs.length },
-            { id: 'users', icon: UserX, label: 'متابعة الطلاب', badge: blockedUsers.length > 0 ? blockedUsers.length : undefined },
+            { id: 'overview',      icon: BarChart3,   label: t('لوحة القيادة',    'Dashboard') },
+            { id: 'events',        icon: Calendar,    label: t('إدارة الأنشطة',   'Activities') },
+            { id: 'attendance',    icon: ListChecks,  label: t('الحضور والغياب',  'Attendance') },
+            { id: 'reports',       icon: FileText,    label: t('التقارير',        'Reports') },
+            { id: 'notifications', icon: Bell,        label: t('الإشعارات',       'Notifications'), badge: emailLogs.length },
+            { id: 'users',         icon: UserX,       label: t('متابعة الزوار',   'Visitors'), badge: blockedUsers.length > 0 ? blockedUsers.length : undefined },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -458,10 +612,10 @@ export function AdminDashboard() {
           <div className="space-y-8 animate-in fade-in duration-300">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: 'إجمالي الفعاليات', value: totalEvents, icon: Calendar, color: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-50' },
-                { label: 'الفعاليات القادمة', value: upcomingEvents, icon: TrendingUp, color: 'bg-secondary', text: 'text-secondary', bg: 'bg-secondary/10' },
-                { label: 'إجمالي التسجيلات', value: totalRegistrations, icon: Users, color: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
-                { label: 'إجمالي الحضور', value: totalAttendees, icon: CheckCircle2, color: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-50' },
+                { label: t('إجمالي الأنشطة', 'Total Activities'), value: totalEvents, icon: Calendar, color: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-50' },
+                { label: t('الأنشطة القادمة', 'Upcoming'), value: upcomingEvents, icon: TrendingUp, color: 'bg-secondary', text: 'text-secondary', bg: 'bg-secondary/10' },
+                { label: t('إجمالي التسجيلات', 'Registrations'), value: totalRegistrations, icon: Users, color: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
+                { label: t('إجمالي الحضور', 'Attendees'), value: totalAttendees, icon: CheckCircle2, color: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-50' },
               ].map((stat, i) => (
                 <div key={i} className="bg-card border-2 border-border rounded-2xl p-6 relative overflow-hidden group hover:border-border/80 transition-all hover:shadow-lg">
                   <div className={`absolute top-0 right-0 w-2 h-full ${stat.color}`}></div>
@@ -483,7 +637,7 @@ export function AdminDashboard() {
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold flex items-center gap-2">
                     <span className="w-2 h-6 bg-secondary rounded-full"></span>
-                    أحدث الفعاليات
+                    أحدث الأنشطة
                   </h3>
                   <button onClick={() => setActiveTab('events')} className="text-sm font-bold text-primary hover:text-secondary transition-colors">
                     عرض الكل
@@ -548,7 +702,7 @@ export function AdminDashboard() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
               <h3 className="text-2xl font-bold flex items-center gap-3">
                 <span className="w-3 h-8 bg-secondary rounded-full block"></span>
-                إدارة الفعاليات
+                {t('إدارة الأنشطة', 'Activity Management')}
               </h3>
               <div className="flex w-full md:w-auto gap-3">
                 <div className="relative flex-1 md:w-64">
@@ -566,7 +720,7 @@ export function AdminDashboard() {
                   className="flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all font-bold shadow-md shadow-primary/20"
                 >
                   <Plus className="w-5 h-5" />
-                  <span className="hidden sm:inline">فعالية جديدة</span>
+                  <span className="hidden sm:inline">{t('نشاط جديد', 'New Activity')}</span>
                 </button>
               </div>
             </div>
@@ -647,6 +801,13 @@ export function AdminDashboard() {
                               title="عرض التفاصيل"
                             >
                               <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/admin/event/${event.id}/qr`)}
+                              className="p-2 bg-white border border-border text-foreground hover:bg-secondary hover:text-white hover:border-secondary rounded-lg transition-all"
+                              title="عرض باركود الدخول"
+                            >
+                              <ScanLine className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => { setSelectedEventForAttendance(event.id); setActiveTab('attendance'); }}
@@ -765,21 +926,21 @@ export function AdminDashboard() {
                         className="flex items-center gap-2 px-4 py-2 bg-secondary text-white text-sm font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-sm"
                       >
                         <Download className="w-4 h-4" />
-                        تصدير التقرير
+                        {t('تصدير التقرير', 'Export Report')}
                       </button>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm text-right">
                         <thead className="bg-muted/50 border-b border-border text-muted-foreground">
                           <tr>
-                            <th className="px-6 py-3 font-bold">الطالب</th>
-                            <th className="px-6 py-3 font-bold">الرقم الجامعي</th>
-                            <th className="px-6 py-3 font-bold hidden md:table-cell">الكلية</th>
-                            <th className="px-6 py-3 font-bold">تسجيل الحضور</th>
-                            <th className="px-6 py-3 font-bold">المغادرة</th>
-                            <th className="px-6 py-3 font-bold">التقييم</th>
-                            <th className="px-6 py-3 font-bold">الحالة</th>
-                            <th className="px-6 py-3 font-bold text-center">الشهادة</th>
+                            <th className="px-6 py-3 font-bold">{t('الزائر', 'Visitor')}</th>
+                            <th className="px-6 py-3 font-bold">{t('الرقم الجامعي', 'ID')}</th>
+                            <th className="px-6 py-3 font-bold hidden md:table-cell">{t('الكلية', 'College')}</th>
+                            <th className="px-6 py-3 font-bold">{t('تسجيل الحضور', 'Check-In')}</th>
+                            <th className="px-6 py-3 font-bold">{t('المغادرة', 'Check-Out')}</th>
+                            <th className="px-6 py-3 font-bold">{t('التقييم', 'Feedback')}</th>
+                            <th className="px-6 py-3 font-bold">{t('الحالة', 'Status')}</th>
+                            <th className="px-6 py-3 font-bold text-center">{t('الشهادة', 'Certificate')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -942,7 +1103,7 @@ export function AdminDashboard() {
                     onClick={handleGenerateReport}
                     className="px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-secondary hover:text-white transition-colors shadow-lg"
                   >
-                    توليد التقرير
+                    {t('توليد التقرير', 'Generate Report')}
                   </button>
                 </div>
               </div>
@@ -963,9 +1124,9 @@ export function AdminDashboard() {
                     <tr>
                       <th className="px-6 py-3 font-bold">الفعالية</th>
                       <th className="px-6 py-3 font-bold">التسجيل</th>
-                      <th className="px-6 py-3 font-bold">الحضور</th>
-                      <th className="px-6 py-3 font-bold">التقييمات</th>
-                      <th className="px-6 py-3 font-bold">معدل الحضور</th>
+                      <th className="px-6 py-3 font-bold">{t('الحضور', 'Attended')}</th>
+                      <th className="px-6 py-3 font-bold">{t('التقييمات', 'Feedback')}</th>
+                      <th className="px-6 py-3 font-bold">{t('معدل الحضور', 'Attendance %')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -1307,13 +1468,24 @@ export function AdminDashboard() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-card rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-border">
+
+            {/* Header */}
             <div className="px-6 py-4 bg-muted/50 border-b border-border flex items-center justify-between shrink-0">
-              <h3 className="text-lg font-bold flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                   {editingEvent ? <Edit className="w-4 h-4 text-primary" /> : <Plus className="w-5 h-5 text-primary" />}
                 </div>
-                {editingEvent ? 'تعديل الفعالية' : 'إضافة فعالية جديدة'}
-              </h3>
+                <div>
+                  <h3 className="text-base font-bold leading-tight">
+                    {editingEvent ? 'تعديل النشاط' : createStep === 1 ? 'اختر نوع النشاط' : 'تفاصيل النشاط'}
+                  </h3>
+                  {!editingEvent && (
+                    <p className="text-xs text-muted-foreground">
+                      {createStep === 1 ? 'الخطوة ١ من ٢' : 'الخطوة ٢ من ٢'}
+                    </p>
+                  )}
+                </div>
+              </div>
               <button
                 onClick={() => { setShowCreateModal(false); setEditingEvent(null); }}
                 className="w-8 h-8 flex items-center justify-center bg-card border border-border rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
@@ -1322,154 +1494,298 @@ export function AdminDashboard() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-bold mb-2">اسم الفعالية <span className="text-destructive">*</span></label>
-                  <input
-                    type="text"
-                    value={eventForm.title}
-                    onChange={e => setEventForm({...eventForm, title: e.target.value})}
-                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                    placeholder="مثال: ورشة عمل الذكاء الاصطناعي"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">الوصف</label>
-                  <textarea
-                    value={eventForm.description}
-                    onChange={e => setEventForm({...eventForm, description: e.target.value})}
-                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
-                    rows={3}
-                    placeholder="وصف مفصل عن أهداف ومحتوى الفعالية..."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold mb-2">التاريخ <span className="text-destructive">*</span></label>
-                    <input
-                      type="date"
-                      value={eventForm.date}
-                      onChange={e => setEventForm({...eventForm, date: e.target.value})}
-                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2">الوقت</label>
-                    <input
-                      type="text"
-                      value={eventForm.time}
-                      onChange={e => setEventForm({...eventForm, time: e.target.value})}
-                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                      placeholder="10:00 - 14:00"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">الموقع / القاعة <span className="text-destructive">*</span></label>
-                  <input
-                    type="text"
-                    value={eventForm.location}
-                    onChange={e => setEventForm({...eventForm, location: e.target.value})}
-                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                    placeholder="مثال: مبنى المؤتمرات - القاعة الكبرى"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">المنظم</label>
-                  <input
-                    type="text"
-                    value={eventForm.organizer}
-                    onChange={e => setEventForm({...eventForm, organizer: e.target.value})}
-                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                    placeholder="مثال: نادي البرمجة"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold mb-2">الفئة</label>
-                    <select
-                      value={eventForm.category}
-                      onChange={e => setEventForm({...eventForm, category: e.target.value})}
-                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+            {/* Step progress bar (new events only) */}
+            {!editingEvent && (
+              <div className="h-1 bg-muted">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: createStep === 1 ? '50%' : '100%' }}
+                />
+              </div>
+            )}
+
+            {/* ── Step 1: Activity Type Selection ── */}
+            {!editingEvent && createStep === 1 ? (
+              <div className="p-6 overflow-y-auto flex-1">
+                <p className="text-sm text-muted-foreground text-center mb-6">اختر نوع النشاط لتحديد الإعدادات المناسبة للفعالية</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {ACTIVITY_TYPES.map(({ value, icon: Icon, color, bg }) => (
+                    <button
+                      key={value}
+                      onClick={() => { setEventForm({ ...eventForm, activityType: value }); setCreateStep(2); }}
+                      className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all hover:scale-[1.02] active:scale-[0.97] ${bg}`}
                     >
-                      {interests.map(i => <option key={i} value={i}>{i}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2">الكلية</label>
-                    <select
-                      value={eventForm.college}
-                      onChange={e => setEventForm({...eventForm, college: e.target.value})}
-                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
-                    >
-                      {colleges.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold mb-2">الطاقة الاستيعابية</label>
-                    <input
-                      type="number"
-                      value={eventForm.capacity}
-                      onChange={e => setEventForm({...eventForm, capacity: parseInt(e.target.value) || 0})}
-                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                      min={1}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2">الحالة</label>
-                    <select
-                      value={eventForm.status}
-                      onChange={e => setEventForm({...eventForm, status: e.target.value as Event['status']})}
-                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
-                    >
-                      <option value="upcoming">قادمة</option>
-                      <option value="ongoing">جارية</option>
-                      <option value="completed">منتهية</option>
-                      <option value="cancelled">ملغاة</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">رابط صورة الفعالية</label>
-                  <input
-                    type="url"
-                    value={eventForm.image}
-                    onChange={e => setEventForm({...eventForm, image: e.target.value})}
-                    className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
-                    placeholder="https://..."
-                  />
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-xl">
-                  <input
-                    type="checkbox"
-                    id="requiresFeedback"
-                    checked={eventForm.requiresFeedback}
-                    onChange={e => setEventForm({...eventForm, requiresFeedback: e.target.checked})}
-                    className="w-5 h-5 rounded border-2 border-border accent-secondary"
-                  />
-                  <label htmlFor="requiresFeedback" className="text-sm font-bold cursor-pointer">
-                    التقييم إلزامي للحصول على الشهادة
-                  </label>
+                      <div className="w-12 h-12 rounded-xl bg-white/80 flex items-center justify-center shadow-sm">
+                        <Icon className={`w-6 h-6 ${color}`} />
+                      </div>
+                      <span className={`font-bold text-sm ${color}`}>{value}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              /* ── Step 2: Event Details Form ── */
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="space-y-5">
 
+                  {/* Selected type badge (new events) */}
+                  {!editingEvent && (
+                    <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                      {(() => {
+                        const t = ACTIVITY_TYPES.find(a => a.value === eventForm.activityType);
+                        return t ? <t.icon className={`w-5 h-5 ${t.color}`} /> : null;
+                      })()}
+                      <span className="font-bold text-sm text-primary flex-1">{eventForm.activityType}</span>
+                      <button
+                        onClick={() => setCreateStep(1)}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        تغيير النوع
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Activity type select (edit mode) */}
+                  {editingEvent && (
+                    <div>
+                      <label className="block text-sm font-bold mb-2">نوع النشاط</label>
+                      <select
+                        value={eventForm.activityType}
+                        onChange={e => setEventForm({ ...eventForm, activityType: e.target.value as ActivityType })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                      >
+                        {ACTIVITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Volunteers toggle */}
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-xl border border-border">
+                    <input
+                      type="checkbox"
+                      id="needsVolunteers"
+                      checked={eventForm.needsVolunteers}
+                      onChange={e => setEventForm({ ...eventForm, needsVolunteers: e.target.checked })}
+                      className="w-5 h-5 rounded border-2 border-border accent-teal-600"
+                    />
+                    <label htmlFor="needsVolunteers" className="text-sm font-bold cursor-pointer flex-1">
+                      يقبل تسجيل متطوعين (Attendees + Volunteers)
+                    </label>
+                  </div>
+
+                  {/* Audience type */}
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الجمهور المستهدف</label>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      {([
+                        { value: 'general',    label: 'عام',    sub: 'لجميع منسوبي الجامعة' },
+                        { value: 'restricted', label: 'مقيّد',  sub: 'حدّد الفئات المسموح لها' },
+                      ] as const).map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setEventForm({ ...eventForm, audienceType: opt.value, allowedAudience: [] })}
+                          className={`flex flex-col gap-1 p-4 rounded-xl border-2 text-right transition-all ${
+                            eventForm.audienceType === opt.value
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/40'
+                          }`}
+                        >
+                          <span className="font-bold text-sm text-foreground">{opt.label}</span>
+                          <span className="text-xs text-muted-foreground">{opt.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {eventForm.audienceType === 'restricted' && (
+                      <div className="grid grid-cols-2 gap-2 p-4 bg-muted/30 rounded-xl border border-border/60">
+                        {([
+                          { id: 'students',             label: 'الطلبة' },
+                          { id: 'teaching_staff',       label: 'أعضاء هيئة التدريس' },
+                          { id: 'administrative_staff', label: 'الكوادر الإدارية' },
+                          { id: 'researchers',          label: 'الباحثون' },
+                          { id: 'alumni',               label: 'الخريجون' },
+                        ] as { id: AudienceGroup; label: string }[]).map(g => (
+                          <label key={g.id} className="flex items-center gap-2 cursor-pointer text-sm py-1">
+                            <input
+                              type="checkbox"
+                              checked={eventForm.allowedAudience.includes(g.id)}
+                              onChange={e => {
+                                const next = e.target.checked
+                                  ? [...eventForm.allowedAudience, g.id]
+                                  : eventForm.allowedAudience.filter(x => x !== g.id);
+                                setEventForm({ ...eventForm, allowedAudience: next });
+                              }}
+                              className="w-4 h-4 accent-primary"
+                            />
+                            <span className="font-medium text-foreground">{g.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold mb-2">اسم النشاط <span className="text-destructive">*</span></label>
+                    <input
+                      type="text"
+                      value={eventForm.title}
+                      onChange={e => setEventForm({ ...eventForm, title: e.target.value })}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      placeholder="مثال: ورشة عمل الذكاء الاصطناعي"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الوصف</label>
+                    <textarea
+                      value={eventForm.description}
+                      onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
+                      rows={3}
+                      placeholder="وصف مفصل عن أهداف ومحتوى الفعالية..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2">التاريخ <span className="text-destructive">*</span></label>
+                      <input
+                        type="date"
+                        value={eventForm.date}
+                        onChange={e => setEventForm({ ...eventForm, date: e.target.value })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2">الوقت</label>
+                      <input
+                        type="text"
+                        value={eventForm.time}
+                        onChange={e => setEventForm({ ...eventForm, time: e.target.value })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                        placeholder="10:00 - 14:00"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">الموقع / القاعة <span className="text-destructive">*</span></label>
+                    <input
+                      type="text"
+                      value={eventForm.location}
+                      onChange={e => setEventForm({ ...eventForm, location: e.target.value })}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      placeholder="مثال: مبنى المؤتمرات - القاعة الكبرى"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">المنظم</label>
+                    <input
+                      type="text"
+                      value={eventForm.organizer}
+                      onChange={e => setEventForm({ ...eventForm, organizer: e.target.value })}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      placeholder="مثال: نادي البرمجة"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2">الفئة</label>
+                      <select
+                        value={eventForm.category}
+                        onChange={e => setEventForm({ ...eventForm, category: e.target.value })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                      >
+                        {interests.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2">الكلية</label>
+                      <select
+                        value={eventForm.college}
+                        onChange={e => setEventForm({ ...eventForm, college: e.target.value })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                      >
+                        {colleges.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2">الطاقة الاستيعابية</label>
+                      <input
+                        type="number"
+                        value={eventForm.capacity}
+                        onChange={e => setEventForm({ ...eventForm, capacity: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                        min={1}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2">الحالة</label>
+                      <select
+                        value={eventForm.status}
+                        onChange={e => setEventForm({ ...eventForm, status: e.target.value as Event['status'] })}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                      >
+                        <option value="upcoming">قادمة</option>
+                        <option value="ongoing">جارية</option>
+                        <option value="completed">منتهية</option>
+                        <option value="cancelled">ملغاة</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">رابط صورة الفعالية</label>
+                    <input
+                      type="url"
+                      value={eventForm.image}
+                      onChange={e => setEventForm({ ...eventForm, image: e.target.value })}
+                      className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="requiresFeedback"
+                      checked={eventForm.requiresFeedback}
+                      onChange={e => setEventForm({ ...eventForm, requiresFeedback: e.target.checked })}
+                      className="w-5 h-5 rounded border-2 border-border accent-secondary"
+                    />
+                    <label htmlFor="requiresFeedback" className="text-sm font-bold cursor-pointer">
+                      التقييم إلزامي للحصول على الشهادة
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
             <div className="px-6 py-4 bg-muted/50 border-t border-border flex gap-3 shrink-0">
-              <button
-                onClick={() => { setShowCreateModal(false); setEditingEvent(null); }}
-                className="flex-1 py-3 bg-white border-2 border-border text-foreground font-bold rounded-xl hover:bg-muted transition-colors"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleSaveEvent}
-                className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"
-              >
-                {editingEvent ? 'حفظ التعديلات' : 'نشر الفعالية'}
-              </button>
+              {!editingEvent && createStep === 1 ? (
+                <button
+                  onClick={() => { setShowCreateModal(false); }}
+                  className="flex-1 py-3 bg-white border-2 border-border text-foreground font-bold rounded-xl hover:bg-muted transition-colors"
+                >
+                  إلغاء
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      if (!editingEvent && createStep === 2) { setCreateStep(1); }
+                      else { setShowCreateModal(false); setEditingEvent(null); }
+                    }}
+                    className="flex-1 py-3 bg-white border-2 border-border text-foreground font-bold rounded-xl hover:bg-muted transition-colors"
+                  >
+                    {!editingEvent ? 'رجوع' : 'إلغاء'}
+                  </button>
+                  <button
+                    onClick={handleSaveEvent}
+                    className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"
+                  >
+                    {editingEvent ? 'حفظ التعديلات' : 'نشر النشاط'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1516,7 +1832,7 @@ export function AdminDashboard() {
         </div>
       )}
 
-
+      <PageFooter />
     </div>
   );
 }
