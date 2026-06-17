@@ -15,7 +15,10 @@
 
 :root {
   --font-size: 16px;
-  --font-family: 'Tajawal', sans-serif;
+  --font-family: 'Bahij TheSansArabic', 'Tajawal', sans-serif;
+  --font-weight-heading: 800;   /* ExtraBold — h1…h4 */
+  --font-weight-medium: 500;    /* buttons, labels */
+  --font-weight-normal: 400;    /* body, inputs */
 
   /* ── Page canvas ── */
   --background: #F5F7FA;
@@ -226,25 +229,25 @@
 
   h1 {
     font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   h2 {
     font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   h3 {
     font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   h4 {
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 

@@ -67,7 +67,7 @@ export function AICheckinMessage({ isOpen, onClose, attendedEvent, user, activit
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#0D1130] to-[#13193E] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[#0D1130] to-[#045D84] p-6 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 left-4 text-white/50 hover:text-white transition-colors"
@@ -109,7 +109,7 @@ export function AICheckinMessage({ isOpen, onClose, attendedEvent, user, activit
 
           <button
             onClick={onClose}
-            className="mt-6 w-full bg-[#0D1130] hover:bg-[#13193E] text-white py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+            className="mt-6 w-full bg-[#0D1130] hover:bg-[#045D84] text-white py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {t('متابعة', 'Continue')}
             <ArrowLeft className="w-4 h-4" />

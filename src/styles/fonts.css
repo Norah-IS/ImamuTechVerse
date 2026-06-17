@@ -1,1 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
+/* ── Fallback: Tajawal from Google Fonts (used until Bahij files are added) ── */
+/* @import must come before all other rules */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Bahij TheSansArabic — Imamu University licensed font
+ *
+ *  Place these 4 files in  src/styles/fonts/  then the font activates:
+ *
+ *    src/styles/fonts/BahijTheSansArabic-Plain.woff2        (weight 400)
+ *    src/styles/fonts/BahijTheSansArabic-Plain.woff
+ *    src/styles/fonts/BahijTheSansArabic-ExtraBold.woff2    (weight 800)
+ *    src/styles/fonts/BahijTheSansArabic-ExtraBold.woff
+ *
+ *  font-display: swap means Tajawal shows immediately while Bahij loads,
+ *  then swaps in. If the files are missing (404) the browser keeps Tajawal.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* Plain / Regular — body text, inputs */
+@font-face {
+  font-family: 'Bahij TheSansArabic';
+  src:
+    url('./fonts/BahijTheSansArabic-Plain.woff2') format('woff2'),
+    url('./fonts/BahijTheSansArabic-Plain.woff')  format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ExtraBold — headings, subheadings, emphasis */
+@font-face {
+  font-family: 'Bahij TheSansArabic';
+  src:
+    url('./fonts/BahijTheSansArabic-ExtraBold.woff2') format('woff2'),
+    url('./fonts/BahijTheSansArabic-ExtraBold.woff')  format('woff');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}

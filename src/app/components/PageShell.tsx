@@ -4,7 +4,7 @@
  */
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageToggle } from './LanguageToggle';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 import { Globe2 } from 'lucide-react';
 
 interface PageShellProps {
@@ -46,9 +46,7 @@ export function PageFooter() {
     <footer className="bg-[#0D1130] border-t border-white/10 mt-auto">
       <div className="max-w-7xl mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Logo variant="university" className="h-8 w-auto opacity-90" />
-          <div className="w-px h-6 bg-white/10 hidden sm:block" />
-          <Logo variant="project" className="h-6 w-auto opacity-80 hidden sm:block" />
+          <LogoGroup variant="bare" uniSize="h-8" projSize="h-6" />
           <div>
             <p className="text-white/80 text-xs font-bold">Imamu TechVerse</p>
             <p className="text-white/30 text-[10px]">

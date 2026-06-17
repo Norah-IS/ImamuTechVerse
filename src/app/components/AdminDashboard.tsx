@@ -43,7 +43,7 @@ import {
   Sparkles,
   ScanLine,
 } from 'lucide-react';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 import {
   getEmailLogs,
   EmailLog,
@@ -188,6 +188,9 @@ export function AdminDashboard() {
     eventDate: string;
     studentEmail: string;
   } | null>(null);
+
+  // Reports — per-event filter
+  const [selectedReportEventId, setSelectedReportEventId] = useState('');
 
   // Notification Center
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
@@ -401,7 +404,11 @@ export function AdminDashboard() {
     const isEn = lang === 'en';
     const dir  = isEn ? 'ltr' : 'rtl';
 
-    const rows = events.map(event => {
+    const reportEvents = selectedReportEventId
+      ? events.filter(e => e.id === selectedReportEventId)
+      : events;
+
+    const rows = reportEvents.map(event => {
       const regs          = mockRegistrations.filter(r => r.eventId === event.id);
       const attendedCount = regs.filter(r => r.status === 'attended').length;
       const feedbackCount = regs.filter(r => r.feedbackSubmitted).length;
@@ -410,26 +417,31 @@ export function AdminDashboard() {
       return { event, regs: event.registeredCount, attended: attendedCount, feedback: feedbackCount, attRate, fbRate };
     });
 
-    const overallAttRate = totalRegistrations > 0 ? Math.round((totalAttendees / totalRegistrations) * 100) : 0;
+    const scopedRegs      = rows.reduce((s, r) => s + r.regs, 0);
+    const scopedAttendees = rows.reduce((s, r) => s + r.attended, 0);
+    const overallAttRate  = scopedRegs > 0 ? Math.round((scopedAttendees / scopedRegs) * 100) : 0;
+    const reportTitle     = selectedReportEventId && reportEvents[0]
+      ? (isEn ? `Activity Report — ${reportEvents[0].title}` : `تقرير فعالية: ${reportEvents[0].title}`)
+      : (isEn ? 'Activities Report — Imamu TechVerse' : 'تقرير الأنشطة — Imamu TechVerse');
     const now = new Date().toLocaleDateString(isEn ? 'en-US' : 'ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const html = `<!DOCTYPE html>
 <html dir="${dir}" lang="${lang}">
 <head>
 <meta charset="UTF-8">
-<title>${isEn ? 'Activities Report — Imamu TechVerse' : 'تقرير الأنشطة — Imamu TechVerse'}</title>
+<title>${reportTitle}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: ${isEn ? "'Segoe UI', Arial, sans-serif" : "'Tajawal', 'Segoe UI', Arial, sans-serif"}; direction: ${dir}; color: #1a1a2e; background: #fff; padding: 32px; font-size: 13px; }
   .header { display: flex; align-items: center; gap: 20px; border-bottom: 4px solid #00ADEF; padding-bottom: 20px; margin-bottom: 24px; }
-  .header-text h1 { font-size: 22px; font-weight: 900; color: #13193E; }
+  .header-text h1 { font-size: 22px; font-weight: 900; color: #045D84; }
   .header-text p  { font-size: 12px; color: #666; margin-top: 4px; }
   .meta { display: flex; gap: 32px; background: #f8f9fb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
   .meta-item label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 4px; }
-  .meta-item .val  { font-size: 24px; font-weight: 900; color: #13193E; }
-  .section-title { font-size: 14px; font-weight: 800; color: #13193E; border-${isEn ? 'left' : 'right'}: 4px solid #00ADEF; padding-${isEn ? 'left' : 'right'}: 12px; margin-bottom: 14px; }
+  .meta-item .val  { font-size: 24px; font-weight: 900; color: #045D84; }
+  .section-title { font-size: 14px; font-weight: 800; color: #045D84; border-${isEn ? 'left' : 'right'}: 4px solid #00ADEF; padding-${isEn ? 'left' : 'right'}: 12px; margin-bottom: 14px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
-  thead tr { background: #13193E; color: #fff; }
+  thead tr { background: #045D84; color: #fff; }
   th { padding: 10px 14px; font-size: 12px; font-weight: 700; text-align: ${isEn ? 'left' : 'right'}; }
   td { padding: 9px 14px; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
   tr:nth-child(even) { background: #f8f9fb; }
@@ -444,15 +456,15 @@ export function AdminDashboard() {
 </head>
 <body>
 <div class="header">
-  <div style="width:56px;height:56px;background:#13193E;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+  <div style="width:56px;height:56px;background:#045D84;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
     <span style="color:#00ADEF;font-weight:900;font-size:18px">IT</span>
   </div>
   <div class="header-text">
-    <h1>Imamu TechVerse — ${isEn ? 'Activities Report' : 'تقرير الأنشطة'}</h1>
+    <h1>${reportTitle}</h1>
     <p>${isEn ? 'Imam Mohammad Ibn Saud Islamic University' : 'جامعة الإمام محمد بن سعود الإسلامية'}</p>
     <p style="margin-top:6px;color:#00ADEF;font-size:11px">${isEn ? 'Generated:' : 'تاريخ الإصدار:'} ${now}</p>
   </div>
-  <button class="no-print" onclick="window.print()" style="margin-${isEn ? 'left' : 'right'}:auto;padding:10px 24px;background:#13193E;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">
+  <button class="no-print" onclick="window.print()" style="margin-${isEn ? 'left' : 'right'}:auto;padding:10px 24px;background:#045D84;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">
     ${isEn ? '🖨 Print / Save PDF' : '🖨 طباعة / حفظ PDF'}
   </button>
 </div>
@@ -460,10 +472,10 @@ export function AdminDashboard() {
 <!-- Summary -->
 <div class="meta">
   ${[
-    { label: isEn ? 'Total Activities' : 'إجمالي الأنشطة', val: totalEvents },
-    { label: isEn ? 'Total Registrations' : 'إجمالي التسجيلات', val: totalRegistrations },
-    { label: isEn ? 'Total Attendees' : 'إجمالي الحاضرين', val: totalAttendees },
-    { label: isEn ? 'Avg Attendance Rate' : 'معدل الحضور', val: overallAttRate + '%' },
+    { label: isEn ? 'Activities' : 'عدد الأنشطة', val: rows.length },
+    { label: isEn ? 'Registrations' : 'التسجيلات', val: scopedRegs },
+    { label: isEn ? 'Attendees' : 'الحاضرون', val: scopedAttendees },
+    { label: isEn ? 'Attendance Rate' : 'معدل الحضور', val: overallAttRate + '%' },
   ].map(s => `<div class="meta-item"><label>${s.label}</label><div class="val">${s.val}</div></div>`).join('')}
 </div>
 
@@ -520,18 +532,11 @@ export function AdminDashboard() {
     <div className="min-h-screen bg-[#F4F6F9] font-sans flex flex-col">
       <TopBar />
       {/* ─── Header ─── */}
-      <header className="bg-[#13193E] border-b-4 border-[#00ADEF] sticky top-0 z-20 shadow-xl shadow-black/20">
+      <header className="bg-[#045D84] border-b-4 border-[#00ADEF] sticky top-0 z-20 shadow-xl shadow-black/20">
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-white rounded-xl p-1.5 shadow-inner">
-                  <Logo variant="university" className="h-9 w-auto" />
-                </div>
-                <div className="bg-white/10 rounded-xl px-2 py-1.5 border border-white/10 hidden sm:block">
-                  <Logo variant="project" className="h-7 w-auto" />
-                </div>
-              </div>
+              <LogoGroup uniSize="h-9" projSize="h-7" />
               <div className="hidden sm:block">
                 <h1 className="text-white text-lg font-bold leading-tight">{t('بوابة المنظّم', 'Organizer Portal')} | Imamu TechVerse</h1>
                 <p className="text-xs font-semibold" style={{ color: '#00ADEF' }}>{t('جامعة الإمام محمد بن سعود الإسلامية', 'Imam Mohammad Ibn Saud Islamic University')}</p>
@@ -632,65 +637,43 @@ export function AdminDashboard() {
               ))}
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold flex items-center gap-2">
-                    <span className="w-2 h-6 bg-secondary rounded-full"></span>
-                    أحدث الأنشطة
-                  </h3>
-                  <button onClick={() => setActiveTab('events')} className="text-sm font-bold text-primary hover:text-secondary transition-colors">
-                    عرض الكل
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {events.slice(0, 4).map((event) => (
-                    <div key={event.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-2xl border border-transparent hover:border-border hover:bg-card transition-all gap-4">
-                      <div className="flex items-center gap-4">
-                        <img src={event.image} alt="" className="w-16 h-16 rounded-xl object-cover shadow-sm hidden sm:block" />
-                        <div>
-                          <h4 className="font-bold text-foreground mb-1 line-clamp-1">{event.title}</h4>
-                          <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                            <Calendar className="w-3 h-3" /> {event.date}
-                            <span className="w-1 h-1 bg-border rounded-full"></span>
-                            <Users className="w-3 h-3" /> {event.registeredCount} مسجل
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 text-xs font-bold rounded-lg ${event.status === 'upcoming' ? 'bg-primary/10 text-primary' : event.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
-                          {event.status === 'upcoming' ? 'قادمة' : event.status === 'cancelled' ? 'ملغاة' : 'مكتملة'}
-                        </span>
-                        <button
-                          onClick={() => navigate(`/admin/event/${event.id}`)}
-                          className="w-10 h-10 flex items-center justify-center bg-white border border-border rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                        </button>
+            <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <span className="w-2 h-6 bg-secondary rounded-full"></span>
+                  أحدث الأنشطة
+                </h3>
+                <button onClick={() => setActiveTab('events')} className="text-sm font-bold text-primary hover:text-secondary transition-colors">
+                  عرض الكل
+                </button>
+              </div>
+              <div className="space-y-4">
+                {events.slice(0, 4).map((event) => (
+                  <div key={event.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-2xl border border-transparent hover:border-border hover:bg-card transition-all gap-4">
+                    <div className="flex items-center gap-4">
+                      <img src={event.image} alt="" className="w-16 h-16 rounded-xl object-cover shadow-sm hidden sm:block" />
+                      <div>
+                        <h4 className="font-bold text-foreground mb-1 line-clamp-1">{event.title}</h4>
+                        <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                          <Calendar className="w-3 h-3" /> {event.date}
+                          <span className="w-1 h-1 bg-border rounded-full"></span>
+                          <Users className="w-3 h-3" /> {event.registeredCount} مسجل
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-primary rounded-3xl p-6 md:p-8 shadow-lg text-white relative overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-2xl" style={{ backgroundColor: 'rgba(0,173,239,0.15)' }}></div>
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-black/20 rounded-full blur-2xl"></div>
-                <div className="relative z-10">
-                  <div className="w-12 h-12 bg-white/20 rounded-xl backdrop-blur flex items-center justify-center mb-6">
-                    <AlertTriangle className="w-6 h-6" style={{ color: '#00ADEF' }} />
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 text-xs font-bold rounded-lg ${event.status === 'upcoming' ? 'bg-primary/10 text-primary' : event.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                        {event.status === 'upcoming' ? 'قادمة' : event.status === 'cancelled' ? 'ملغاة' : 'مكتملة'}
+                      </span>
+                      <button
+                        onClick={() => navigate(`/admin/event/${event.id}`)}
+                        className="w-10 h-10 flex items-center justify-center bg-card border border-border rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">تنبيهات النظام</h3>
-                  <p className="text-white/80 text-sm mb-6 leading-relaxed">
-                    يوجد {events.filter(e => e.registeredCount >= e.capacity).reduce((acc, curr) => acc + curr.waitlistCount, 0)} طالب في قوائم انتظار الفعاليات المكتملة. يرجى مراجعة القوائم واتخاذ الإجراء اللازم.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('events')}
-                    className="w-full py-3 bg-secondary text-white font-bold rounded-xl hover:bg-white hover:text-primary transition-colors shadow-lg"
-                  >
-                    إدارة قوائم الانتظار
-                  </button>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -1080,57 +1063,93 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {/* ─── Reports Tab (Req 38-39) ─── */}
+        {/* ─── Reports Tab ─── */}
         {activeTab === 'reports' && (
           <div className="animate-in fade-in duration-300">
-            <h3 className="text-2xl font-bold flex items-center gap-3 mb-8">
+            <h3 className="text-2xl font-bold flex items-center gap-3 mb-6">
               <span className="w-3 h-8 bg-secondary rounded-full block"></span>
-              التقارير والإحصائيات المتقدمة
+              {t('التقارير والإحصائيات', 'Reports & Statistics')}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-[#13193E] to-primary rounded-3xl p-8 text-white relative overflow-hidden shadow-lg group">
+            {/* ── Event selector ── */}
+            <div className="bg-card border border-border rounded-2xl p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex-1">
+                <p className="font-bold text-foreground mb-1">{t('اختر الفعالية', 'Select Activity')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('اختر فعالية محددة لعرض تقريرها، أو اتركها فارغة لتقرير شامل.', 'Pick a specific activity for its report, or leave blank for an overall report.')}
+                </p>
+              </div>
+              <select
+                value={selectedReportEventId}
+                onChange={e => setSelectedReportEventId(e.target.value)}
+                className="w-full sm:w-72 px-4 py-2.5 bg-input-background border border-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">{t('— جميع الفعاليات —', '— All Activities —')}</option>
+                {events.map(e => (
+                  <option key={e.id} value={e.id}>{e.title}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* ── Generate card ── */}
+            <div className="mb-6">
+              <div className="bg-gradient-to-br from-[#045D84] to-primary rounded-3xl p-8 text-white relative overflow-hidden shadow-lg group">
                 <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center mb-6">
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                  <div className="w-14 h-14 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center shrink-0">
                     <FileText className="w-7 h-7 text-secondary" />
                   </div>
-                  <h4 className="text-2xl font-bold mb-3">تقارير الحضور الشاملة</h4>
-                  <p className="text-white/70 mb-8 text-sm leading-relaxed max-w-sm">
-                    استخراج تقارير مفصلة توضح معدلات الحضور والغياب لجميع الأنشطة الجامعية.
-                  </p>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold mb-1">
+                      {selectedReportEventId
+                        ? (events.find(e => e.id === selectedReportEventId)?.title ?? t('تقرير الفعالية', 'Activity Report'))
+                        : t('تقرير الأنشطة الشامل', 'Full Activities Report')}
+                    </h4>
+                    <p className="text-white/70 text-sm">
+                      {selectedReportEventId
+                        ? t('تقرير مفصّل لهذه الفعالية: التسجيلات، الحضور، معدل الحضور، والتقييمات.', 'Detailed report for this activity: registrations, attendance, rate, and feedback.')
+                        : t('تقرير شامل لجميع الأنشطة الجامعية.', 'Comprehensive report for all university activities.')}
+                    </p>
+                  </div>
                   <button
                     onClick={handleGenerateReport}
-                    className="px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-secondary hover:text-white transition-colors shadow-lg"
+                    className="shrink-0 px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-secondary hover:text-white transition-colors shadow-lg"
                   >
                     {t('توليد التقرير', 'Generate Report')}
                   </button>
                 </div>
               </div>
-
             </div>
 
-            {/* Events summary table */}
+            {/* ── Summary table (respects filter) ── */}
             <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-border">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                 <h4 className="font-bold text-foreground flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-primary" />
-                  ملخص أداء الفعاليات
+                  {selectedReportEventId ? t('أداء الفعالية المختارة', 'Selected Activity Performance') : t('ملخص أداء الفعاليات', 'All Activities Performance')}
                 </h4>
+                {selectedReportEventId && (
+                  <button
+                    onClick={() => setSelectedReportEventId('')}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    {t('عرض الكل', 'Show all')}
+                  </button>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-right">
                   <thead className="bg-muted/50 border-b border-border text-muted-foreground">
                     <tr>
-                      <th className="px-6 py-3 font-bold">الفعالية</th>
-                      <th className="px-6 py-3 font-bold">التسجيل</th>
+                      <th className="px-6 py-3 font-bold">{t('الفعالية', 'Activity')}</th>
+                      <th className="px-6 py-3 font-bold">{t('التسجيل', 'Registered')}</th>
                       <th className="px-6 py-3 font-bold">{t('الحضور', 'Attended')}</th>
                       <th className="px-6 py-3 font-bold">{t('التقييمات', 'Feedback')}</th>
                       <th className="px-6 py-3 font-bold">{t('معدل الحضور', 'Attendance %')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {events.map(event => {
+                    {(selectedReportEventId ? events.filter(e => e.id === selectedReportEventId) : events).map(event => {
                       const eventRegs = mockRegistrations.filter(r => r.eventId === event.id);
                       const attended = eventRegs.filter(r => r.status === 'attended').length;
                       const feedback = eventRegs.filter(r => r.feedbackSubmitted).length;
@@ -1139,7 +1158,7 @@ export function AdminDashboard() {
                         <tr key={event.id} className="hover:bg-muted/30 transition-colors">
                           <td className="px-6 py-3">
                             <p className="font-bold text-foreground line-clamp-1">{event.title}</p>
-                            <p className="text-xs text-muted-foreground">{event.date}</p>
+                            <p className="text-xs text-muted-foreground">{event.date} · {event.activityType}</p>
                           </td>
                           <td className="px-6 py-3 font-medium">{event.registeredCount} / {event.capacity}</td>
                           <td className="px-6 py-3 font-bold text-green-600">{attended}</td>

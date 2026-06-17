@@ -68,13 +68,13 @@ export function LoginPage() {
       <div className="flex flex-col md:flex-row flex-1">
       {/* Left side: Background Image & Branding */}
       <div className="md:w-1/2 relative hidden md:flex flex-col justify-between p-12 overflow-hidden">
-        <div className="absolute inset-0 bg-primary/95 z-0">
+        <div className="absolute inset-0 bg-[#045D84]/95 z-0">
           <img
             src="https://images.unsplash.com/photo-1700671562333-f71286a7c748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwY2FtcHVzJTIwYXJjaGl0ZWN0dXJlfGVufDF8fHx8MTc3Njk5MTkzOHww&ixlib=rb-4.1.0&q=80&w=1080"
             alt="University Campus"
             className="w-full h-full object-cover mix-blend-overlay opacity-40"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/80 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#045D84] via-[#045D84]/80 to-transparent"></div>
         </div>
         
         <div className="relative z-10 flex items-center justify-between">
@@ -86,19 +86,19 @@ export function LoginPage() {
         </div>
 
         <div className="relative z-10 text-white max-w-md">
-          <h1 className="text-4xl font-black mb-4 leading-tight" style={{ color: '#00ADEF' }}>
+          <h1 className="text-4xl font-black mb-4 leading-tight text-white">
             {t('نظام إدارة الأنشطة', 'Activity Management')}
             <br />
-            <span className="text-white">Imamu TechVerse</span>
+            <span style={{ color: '#B7A362' }}>Imamu TechVerse</span>
           </h1>
-          <p className="text-primary-foreground/80 text-lg leading-relaxed mb-8">
+          <p className="text-white/80 text-lg leading-relaxed mb-8">
             {t(
               'منصة متكاملة لاكتشاف والتسجيل في الأنشطة الأكاديمية والتقنية والاجتماعية بكل سهولة.',
               'An integrated portal to discover and register for academic, technical, and social activities.'
             )}
           </p>
-          <div className="flex items-center gap-4 text-sm text-primary-foreground/70 bg-black/20 p-4 rounded-xl backdrop-blur-sm border border-white/10">
-            <ShieldCheck className="w-6 h-6" style={{ color: '#00ADEF' }} />
+          <div className="flex items-center gap-4 text-sm text-white/70 bg-black/20 p-4 rounded-xl backdrop-blur-sm border border-white/10">
+            <ShieldCheck className="w-6 h-6" style={{ color: '#B7A362' }} />
             <p>{t('تسجيل دخول آمن وموحد لمنسوبي جامعة الامام محمد بن سعود الإسلامية ', 'Secure unified login for university members and students')}</p>
           </div>
         </div>

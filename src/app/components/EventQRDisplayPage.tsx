@@ -15,7 +15,7 @@ import {
 import {
   ArrowRight, Maximize2, Minimize2, Users, Radio, RadioTower, Clock, Calendar, MapPin,
 } from 'lucide-react';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 
 export function EventQRDisplayPage() {
   const { id } = useParams<{ id: string }>();
@@ -131,8 +131,7 @@ export function EventQRDisplayPage() {
         {/* Event title */}
         <div className="text-center max-w-2xl">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <Logo variant="university" className="h-8 w-auto" />
-            <Logo variant="project" className="h-6 w-auto opacity-70 hidden sm:block" />
+            <LogoGroup variant="bare" uniSize="h-8" projSize="h-6" />
             <span className="text-white/50 text-sm tracking-wider uppercase">
               {t('جامعة الإمام محمد بن سعود الإسلامية', 'Imam Mohammad Ibn Saud Islamic University')}
             </span>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { colleges, interests } from '../data/mockData';
 import { Check, ChevronDown, UserCircle, Building } from 'lucide-react';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 
 export function PreferencesPage() {
   const { user, completePreferences } = useAuth();
@@ -52,12 +52,10 @@ export function PreferencesPage() {
 
       <header className="bg-primary/95 backdrop-blur border-b-4 border-secondary sticky top-0 z-20 shadow-md">
         <div className="max-w-3xl mx-auto px-4 py-3 md:py-4 flex items-center justify-center gap-3">
-          <div className="bg-white rounded-xl p-1.5 shadow-inner">
-            <Logo variant="university" className="h-9 w-auto" />
-          </div>
+          <LogoGroup uniSize="h-9" projSize="h-7" />
           <div>
             <h2 className="text-white font-bold text-xl">Imamu TechVerse</h2>
-            <p className="text-xs font-semibold" style={{ color: '#00ADEF' }}>جامعة الإمام محمد بن سعود الإسلامية</p>
+            <p className="text-xs font-semibold" style={{ color: '#B7A362' }}>جامعة الإمام محمد بن سعود الإسلامية</p>
           </div>
         </div>
       </header>

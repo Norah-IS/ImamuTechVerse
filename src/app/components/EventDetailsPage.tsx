@@ -23,7 +23,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { Toaster } from 'sonner';
 import { TopBar, PageFooter } from './PageShell';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 import { EmailConfirmationModal } from './EmailConfirmationModal';
 import { CheckInModal } from './CheckInModal';
 import { CertificateModal } from './CertificateModal';
@@ -118,6 +118,38 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
       alert('لا يمكنك التسجيل حاليًا. تم حظر حسابك بسبب تجاوز حد الغيابات.');
       return;
     }
+    // Time-conflict check: block if user already has a confirmed registration
+    // on the same date that overlaps this event's time window.
+    const parseMinutes = (timeStr: string): { start: number; end: number } | null => {
+      const parts = timeStr.split(' - ').map(s => s.trim());
+      if (parts.length !== 2) return null;
+      const toMins = (t: string) => {
+        const [h, m] = t.split(':').map(Number);
+        return isNaN(h) || isNaN(m) ? null : h * 60 + m;
+      };
+      const start = toMins(parts[0]);
+      const end = toMins(parts[1]);
+      return start !== null && end !== null ? { start, end } : null;
+    };
+
+    const thisTime = parseMinutes(event.time);
+    if (thisTime) {
+      const conflictingEvent = registrations
+        .filter(r => r.userId === user!.id && r.status === 'registered')
+        .map(r => mockEvents.find(e => e.id === r.eventId))
+        .find(e => {
+          if (!e || e.id === event.id || e.date !== event.date) return false;
+          const t = parseMinutes(e.time);
+          return t !== null && thisTime.start < t.end && t.start < thisTime.end;
+        });
+      if (conflictingEvent) {
+        alert(
+          `لا يمكنك التسجيل — لديك تعارض في الوقت مع:\n"${conflictingEvent.title}"\n\nCannot register — time conflict with:\n"${conflictingEvent.title}"`
+        );
+        return;
+      }
+    }
+
     if (event.audienceType === 'restricted' && event.allowedAudience.length > 0) {
       const userGroup: AudienceGroup = user?.role === 'student' ? 'students' : 'teaching_staff';
       if (!event.allowedAudience.includes(userGroup)) {
@@ -312,14 +344,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
               <h1 className="text-white text-base md:text-lg font-bold leading-tight hidden sm:block">
                 {t('تفاصيل النشاط', 'Activity Details')}{adminView ? t(' (إداري)', ' (Admin)') : ''}
               </h1>
-              <div className="flex items-center gap-1.5">
-                <div className="bg-white rounded-xl p-1.5 shadow-inner">
-                  <Logo variant="university" className="h-7 w-auto" />
-                </div>
-                <div className="bg-white/10 rounded-xl p-1.5 border border-white/10 hidden sm:block">
-                  <Logo variant="project" className="h-6 w-auto" />
-                </div>
-              </div>
+              <LogoGroup uniSize="h-7" projSize="h-6" />
             </div>
           </div>
         </div>

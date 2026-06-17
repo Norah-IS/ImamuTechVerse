@@ -8,7 +8,7 @@ import {
   ScanLine, CheckCircle2, XCircle, AlertTriangle, ArrowRight, Users,
   Camera, CameraOff, Search, Clock,
 } from 'lucide-react';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 import { LanguageToggle } from './LanguageToggle';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -172,7 +172,7 @@ export function OrganizerScannerPage() {
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col" dir="rtl">
       {/* Header */}
-      <header className="bg-[#13193E] border-b-4 border-secondary sticky top-0 z-20 shadow-xl">
+      <header className="bg-[#045D84] border-b-4 border-secondary sticky top-0 z-20 shadow-xl">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <button onClick={() => navigate('/admin')}
             className="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-xl flex items-center justify-center transition-all">
@@ -181,10 +181,7 @@ export function OrganizerScannerPage() {
           <div className="flex items-center gap-3">
             <LanguageToggle variant="light" />
             <span className="text-white font-bold text-sm hidden sm:block">{t('ماسح الحضور', 'Attendance Scanner')}</span>
-            <div className="flex items-center gap-1.5">
-              <div className="bg-white rounded-xl p-1.5"><Logo variant="university" className="h-7 w-auto" /></div>
-              <div className="bg-white/10 rounded-xl p-1.5 border border-white/10 hidden sm:block"><Logo variant="project" className="h-6 w-auto" /></div>
-            </div>
+            <LogoGroup uniSize="h-7" projSize="h-6" />
           </div>
         </div>
       </header>

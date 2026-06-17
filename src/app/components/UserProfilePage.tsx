@@ -24,7 +24,7 @@ import {
   ClipboardList,
   TrendingUp,
 } from 'lucide-react';
-import { Logo } from './logo';
+import { Logo, LogoGroup } from './logo';
 import { LanguageToggle } from './LanguageToggle';
 import { useLanguage } from '../context/LanguageContext';
 import { TopBar, PageFooter } from './PageShell';
@@ -141,14 +141,7 @@ export function UserProfilePage() {
               <LanguageToggle variant="light" />
               <span className="text-white font-bold hidden sm:block">{t('ملفي الشخصي', 'My Profile')}</span>
               {user && <NotificationPanel userId={user.id} />}
-              <div className="flex items-center gap-1.5">
-                <div className="bg-white rounded-xl p-1.5 shadow-inner">
-                  <Logo variant="university" className="h-7 w-auto" />
-                </div>
-                <div className="bg-white/10 rounded-xl p-1.5 border border-white/10 hidden sm:block">
-                  <Logo variant="project" className="h-6 w-auto" />
-                </div>
-              </div>
+              <LogoGroup uniSize="h-7" projSize="h-6" />
             </div>
           </div>
         </div>
@@ -550,10 +543,7 @@ export function UserProfilePage() {
                       Co-Curricular Activity Record
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Logo variant="university" className="h-10 w-auto" />
-                    <Logo variant="project" className="h-7 w-auto opacity-70 hidden sm:block" />
-                  </div>
+                  <LogoGroup variant="bare" uniSize="h-10" projSize="h-7" />
                 </div>
 
                 <div className="border-t border-border/60 pt-4 mb-5">

@@ -345,7 +345,7 @@ export function AIChatWidget() {
       {/* ── Floating button ── */}
       <button
         onClick={() => (isOpen ? handleClose() : setIsOpen(true))}
-        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-3 bg-[#0D1130] hover:bg-[#13193E] text-white rounded-2xl shadow-xl border border-white/10 transition-all active:scale-95 group"
+        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-3 bg-[#0D1130] hover:bg-[#045D84] text-white rounded-2xl shadow-xl border border-white/10 transition-all active:scale-95 group"
         aria-label={t('المساعد الذكي', 'AI Assistant')}
       >
         {isOpen ? (

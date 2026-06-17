@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mockEvents, mockRegistrations, mockUsersDB, colleges as allColleges } from '../data/mockData';
+
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -8,7 +9,7 @@ import {
   ChevronLeft, Bell, X, Building2, SlidersHorizontal, Award, BookOpen,
   GraduationCap, Globe2, Trophy, Star,
 } from 'lucide-react';
-import { Logo } from './logo';
+import { LogoGroup } from './logo';
 import { LanguageToggle } from './LanguageToggle';
 import { isUserBlocked } from '../services/emailService';
 import { getAbsenceCount } from '../services/absenceService';
@@ -65,13 +66,11 @@ export function HomePage() {
   const activeFiltersCount = [selectedCategory, selectedCollege, selectedDate].filter(Boolean).length;
 
   const collegeLeaderboard = useMemo(() => {
-    // Seed every college with zero scores
     const map: Record<string, { name: string; registered: number; attended: number; feedback: number }> = {};
     allColleges
       .filter(c => c !== 'جميع الكليات')
       .forEach(c => { map[c] = { name: c, registered: 0, attended: 0, feedback: 0 }; });
 
-    // Tally by the registering student's college
     mockRegistrations
       .filter(r => r.status !== 'waitlist' && r.status !== 'cancelled')
       .forEach(r => {
@@ -95,10 +94,10 @@ export function HomePage() {
   const myCertCount = myRegistrations.filter(r => r.certificateIssued).length;
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] flex flex-col font-sans" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-background flex flex-col font-sans" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
 
       {/* ── Top utility bar ── */}
-      <div className="bg-[#0D1130] border-b border-white/10">
+      <div className="bg-[#045D84] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-4 text-[11px] text-white/50">
             <span className="hidden sm:flex items-center gap-1.5">
@@ -123,25 +122,18 @@ export function HomePage() {
       </div>
 
       {/* ── Main Header ── */}
-      <header className="bg-[#13193E] border-b-4 border-[#00ADEF] shadow-2xl sticky top-0 z-20">
+      <header className="bg-[#045D84] border-b-4 border-[#B7A362] shadow-2xl sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4">
           {/* Identity row */}
           <div className="flex items-center justify-between py-3 border-b border-white/10">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-white/5 rounded-2xl p-2 border border-white/10">
-                  <Logo variant="university" className="h-10 w-auto" />
-                </div>
-                <div className="bg-white/5 rounded-xl p-1.5 border border-white/10 hidden sm:block">
-                  <Logo variant="project" className="h-7 w-auto" />
-                </div>
-              </div>
+              <LogoGroup uniSize="h-9" projSize="h-9" />
               <div>
                 <div className="flex items-baseline gap-2">
                   <h1 className="text-white font-black text-lg leading-none tracking-tight">
                     Imamu TechVerse
                   </h1>
-                  <span className="hidden sm:block text-[#00ADEF] text-[10px] font-bold bg-[#00ADEF]/10 px-2 py-0.5 rounded-full border border-[#00ADEF]/30">
+                  <span className="hidden sm:block text-[#B7A362] text-[10px] font-bold bg-[#B7A362]/10 px-2 py-0.5 rounded-full border border-[#B7A362]/30">
                     {t('بوابة الأنشطة', 'Activities Portal')}
                   </span>
                 </div>
@@ -157,8 +149,8 @@ export function HomePage() {
                 onClick={() => navigate('/profile')}
                 className="flex items-center gap-2.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all"
               >
-                <div className="w-8 h-8 bg-[#00ADEF]/20 border border-[#00ADEF]/30 rounded-xl flex items-center justify-center">
-                  <UserIcon className="w-4 h-4 text-[#00ADEF]" />
+                <div className="w-8 h-8 bg-[#B7A362]/20 border border-[#B7A362]/30 rounded-xl flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-[#B7A362]" />
                 </div>
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-bold text-white leading-none">{user?.name?.split(' ').slice(0, 2).join(' ')}</p>
@@ -183,8 +175,8 @@ export function HomePage() {
               { icon: Award, value: myCertCount, label: t('شهادة', 'Certificate') },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-2 text-white/70 whitespace-nowrap">
-                <s.icon className="w-3.5 h-3.5 text-[#00ADEF]" />
-                <span className="text-[#00ADEF] font-black text-sm">{s.value}</span>
+                <s.icon className="w-3.5 h-3.5 text-[#B7A362]" />
+                <span className="text-[#B7A362] font-black text-sm">{s.value}</span>
                 <span className="text-[11px]">{s.label}</span>
                 {i < 2 && <span className="text-white/20 mr-3">|</span>}
               </div>
@@ -214,14 +206,12 @@ export function HomePage() {
       <main className="flex-1 flex flex-col">
 
         {/* ── Hero Banner ── */}
-        <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #13193E 0%, #1E2652 50%, #0f1a3d 100%)' }}>
-          {/* Background decorative elements */}
+        <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #045D84 0%, #034a6a 50%, #023850 100%)' }}>
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #00ADEF, transparent)' }} />
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full opacity-5" style={{ background: 'radial-gradient(circle, #5C2D91, transparent)' }} />
-            {/* Circuit board dots pattern */}
+            <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #B7A362, transparent)' }} />
+            <div className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full opacity-5" style={{ background: 'radial-gradient(circle, #045D84, transparent)' }} />
             <div className="absolute inset-0 opacity-[0.03]"
-              style={{ backgroundImage: 'radial-gradient(#00ADEF 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+              style={{ backgroundImage: 'radial-gradient(#B7A362 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
           </div>
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 md:py-14">
@@ -230,7 +220,7 @@ export function HomePage() {
               {/* Left: Text */}
               <div className="flex-1 text-center md:text-right">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border mb-4 text-xs font-bold"
-                  style={{ backgroundColor: 'rgba(0,173,239,0.12)', borderColor: 'rgba(0,173,239,0.3)', color: '#00ADEF' }}>
+                  style={{ backgroundColor: 'rgba(183,163,98,0.12)', borderColor: 'rgba(183,163,98,0.3)', color: '#B7A362' }}>
                   <GraduationCap className="w-3.5 h-3.5" />
                   {t('بوابة الأنشطةالجامعية', 'University Co-Curricular Activities Portal')}
                 </div>
@@ -253,7 +243,7 @@ export function HomePage() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder={t('ابحث عن نشاط، ورشة، دورة...', 'Search for an activity, workshop, course...')}
-                    className="w-full pr-11 pl-5 py-3 bg-white/10 backdrop-blur border border-white/20 rounded-xl text-white placeholder-white/30 text-sm font-medium focus:outline-none focus:border-[#00ADEF]/60 focus:bg-white/15 transition-all"
+                    className="w-full pr-11 pl-5 py-3 bg-white/10 backdrop-blur border border-white/20 rounded-xl text-white placeholder-white/30 text-sm font-medium focus:outline-none focus:border-[#B7A362]/60 focus:bg-white/15 transition-all"
                   />
                 </div>
               </div>
@@ -261,10 +251,9 @@ export function HomePage() {
               {/* Right: Logo display */}
               <div className="hidden md:flex shrink-0 items-center justify-center">
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-full blur-3xl opacity-30" style={{ background: '#00ADEF' }} />
+                  <div className="absolute inset-0 rounded-full blur-3xl opacity-30" style={{ background: '#B7A362' }} />
                   <div className="relative bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur flex flex-col items-center gap-3">
-                    <Logo variant="university" className="h-24 w-auto" />
-                    <Logo variant="project" className="h-8 w-auto opacity-80" />
+                    <LogoGroup variant="bare" uniSize="h-24" projSize="h-32" />
                   </div>
                 </div>
               </div>
@@ -272,24 +261,24 @@ export function HomePage() {
           </div>
 
           {/* Bottom wave divider */}
-          <div className="absolute bottom-0 left-0 right-0 h-6 bg-[#F4F6F9]"
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-background"
             style={{ clipPath: 'ellipse(55% 100% at 50% 100%)' }} />
         </div>
 
         {/* ── College Leaderboard ── */}
         {collegeLeaderboard.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 pt-6 pb-2 w-full">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+            <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
               {/* Header */}
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#13193E,#5C2D91)' }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#045D84,#045D84)' }}>
                   <Trophy className="w-4 h-4 text-yellow-300" />
                 </div>
                 <div>
-                  <h3 className="font-black text-[#13193E] text-base leading-tight">
+                  <h3 className="font-black text-foreground text-base leading-tight">
                     {t('لوحة الكليات المتميزة', 'Top Colleges Leaderboard')}
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {t('النقاط = حضور ×٣ + تسجيل ×١ + تقييم ×٢', 'Points = Attendance ×3 + Registrations ×1 + Ratings ×2')}
                   </p>
                 </div>
@@ -307,7 +296,7 @@ export function HomePage() {
                   const accentColors = ['text-yellow-600', 'text-gray-500', 'text-orange-500'];
                   const medal = medals[idx] ?? `#${idx + 1}`;
                   const cardGrad = medalColors[idx] ?? 'from-blue-50 border-blue-100';
-                  const accent = accentColors[idx] ?? 'text-[#00ADEF]';
+                  const accent = accentColors[idx] ?? 'text-[#B7A362]';
 
                   return (
                     <div
@@ -317,28 +306,28 @@ export function HomePage() {
                       {/* Rank + name */}
                       <div className="flex items-center gap-2">
                         <span className="text-xl leading-none">{medal}</span>
-                        <p className="font-bold text-[#13193E] text-sm leading-tight line-clamp-2">{college.name}</p>
+                        <p className="font-bold text-foreground text-sm leading-tight line-clamp-2">{college.name}</p>
                       </div>
 
                       {/* Points badge */}
                       <div className={`text-2xl font-black ${accent}`}>
-                        {college.points} <span className="text-xs font-bold text-gray-400">{t('نقطة', 'pts')}</span>
+                        {college.points} <span className="text-xs font-bold text-muted-foreground">{t('نقطة', 'pts')}</span>
                       </div>
 
                       {/* Breakdown */}
-                      <div className="space-y-1 pt-1 border-t border-black/5">
+                      <div className="space-y-1 pt-1 border-t border-border/20">
                         {[
                           { icon: Users,    value: college.attended,  label: t('حضور', 'Attended'),   mult: '×٣' },
                           { icon: Building2, value: college.registered, label: t('تسجيل', 'Registered'), mult: '×١' },
                           { icon: Star,     value: college.feedback,  label: t('تقييم', 'Ratings'),   mult: '×٢' },
                         ].map(({ icon: Icon, value, label, mult }) => (
-                          <div key={label} className="flex items-center justify-between text-xs text-gray-500">
+                          <div key={label} className="flex items-center justify-between text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
-                              <Icon className="w-3 h-3 text-gray-400" />
+                              <Icon className="w-3 h-3 text-muted-foreground/60" />
                               <span>{label}</span>
-                              <span className="text-gray-300">{mult}</span>
+                              <span className="text-muted-foreground/40">{mult}</span>
                             </div>
-                            <span className="font-bold text-[#13193E]">{value}</span>
+                            <span className="font-bold text-foreground">{value}</span>
                           </div>
                         ))}
                       </div>
@@ -354,11 +343,11 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 py-8 w-full">
 
           {/* Controls card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-5 mb-6">
+          <div className="bg-card rounded-2xl shadow-sm border border-border p-4 md:p-5 mb-6">
             <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
 
               {/* Tabs */}
-              <div className="flex p-1 bg-gray-100 rounded-xl overflow-x-auto gap-0.5 w-full lg:w-auto">
+              <div className="flex p-1 bg-muted rounded-xl overflow-x-auto gap-0.5 w-full lg:w-auto">
                 {[
                   { id: 'recommended', label: t('موصى بها', 'Recommended') },
                   { id: 'all', label: t('جميع الأنشطة', 'All Activities') },
@@ -369,13 +358,13 @@ export function HomePage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === tab.id
-                        ? 'bg-white text-[#13193E] shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
                       }`}
                   >
                     {tab.label}
                     {tab.badge !== undefined && tab.badge > 0 && (
-                      <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] bg-[#00ADEF] text-white rounded-full font-black">
+                      <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] bg-secondary text-white rounded-full font-black">
                         {tab.badge}
                       </span>
                     )}
@@ -387,14 +376,14 @@ export function HomePage() {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${showFilters || activeFiltersCount > 0
-                    ? 'bg-[#13193E] text-white border-[#13193E]'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#13193E]/30'
+                    ? 'bg-[#045D84] text-white border-[#045D84]'
+                    : 'bg-card text-foreground border-border hover:border-foreground/30'
                   }`}
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 {t('تصفية', 'Filter')}
                 {activeFiltersCount > 0 && (
-                  <span className="w-5 h-5 bg-[#00ADEF] text-white rounded-full text-[10px] font-black flex items-center justify-center">
+                  <span className="w-5 h-5 bg-secondary text-white rounded-full text-[10px] font-black flex items-center justify-center">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -403,27 +392,27 @@ export function HomePage() {
 
             {/* Filters */}
             {showFilters && (
-              <div className="pt-4 mt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-200">
+              <div className="pt-4 mt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-200">
                 <div className="relative">
-                  <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}
-                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00ADEF] text-sm font-medium appearance-none">
+                    className="w-full pl-4 pr-10 py-2.5 bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-secondary text-sm font-medium appearance-none">
                     <option value="">{t('كل التصنيفات', 'All Categories')}</option>
                     {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
                 <div className="relative">
-                  <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <select value={selectedCollege} onChange={e => setSelectedCollege(e.target.value)}
-                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00ADEF] text-sm font-medium appearance-none">
+                    className="w-full pl-4 pr-10 py-2.5 bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-secondary text-sm font-medium appearance-none">
                     <option value="">{t('كل الكليات', 'All Colleges')}</option>
                     {colleges.map(col => <option key={col} value={col}>{col}</option>)}
                   </select>
                 </div>
                 <div className="relative">
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00ADEF] text-sm font-medium" />
+                    className="w-full pl-4 pr-10 py-2.5 bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-secondary text-sm font-medium" />
                 </div>
                 {activeFiltersCount > 0 && (
                   <button onClick={() => { setSelectedCategory(''); setSelectedCollege(''); setSelectedDate(''); }}
@@ -437,14 +426,14 @@ export function HomePage() {
 
           {/* Recommendation banner */}
           {activeTab === 'recommended' && user?.interests && user.interests.length > 0 && (
-            <div className="flex items-center gap-3 mb-5 px-4 py-3 bg-[#13193E]/5 border border-[#13193E]/10 rounded-xl">
-              <div className="w-8 h-8 bg-[#13193E]/10 rounded-xl flex items-center justify-center shrink-0">
-                <GraduationCap className="w-4 h-4 text-[#13193E]" />
+            <div className="flex items-center gap-3 mb-5 px-4 py-3 bg-secondary/5 border border-secondary/15 rounded-xl">
+              <div className="w-8 h-8 bg-secondary/10 rounded-xl flex items-center justify-center shrink-0">
+                <GraduationCap className="w-4 h-4 text-secondary" />
               </div>
               <div className="flex-1 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-bold text-[#13193E]">{t('بناءً على اهتماماتك:', 'Based on your interests:')}</span>
+                <span className="text-sm font-bold text-foreground">{t('بناءً على اهتماماتك:', 'Based on your interests:')}</span>
                 {user.interests.slice(0, 3).map(i => (
-                  <span key={i} className="px-2 py-0.5 bg-[#13193E] text-white rounded-lg text-xs font-bold">{i}</span>
+                  <span key={i} className="px-2 py-0.5 bg-secondary text-white rounded-lg text-xs font-bold">{i}</span>
                 ))}
               </div>
             </div>
@@ -452,10 +441,10 @@ export function HomePage() {
 
           {/* Events Grid */}
           {filteredEvents.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center shadow-sm">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-700 mb-2">{t('لا توجد أنشطة مطابقة', 'No matching activities')}</h3>
-              <p className="text-gray-400 text-sm">{t('جرب تغيير خيارات البحث أو تصفح الأقسام الأخرى.', 'Try changing your search or browse other tabs.')}</p>
+            <div className="bg-card rounded-2xl border border-border p-16 text-center shadow-sm">
+              <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-foreground mb-2">{t('لا توجد أنشطة مطابقة', 'No matching activities')}</h3>
+              <p className="text-muted-foreground text-sm">{t('جرب تغيير خيارات البحث أو تصفح الأقسام الأخرى.', 'Try changing your search or browse other tabs.')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -468,7 +457,7 @@ export function HomePage() {
                   <div
                     key={event.id}
                     onClick={() => navigate(`/event/${event.id}`)}
-                    className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-[#00ADEF]/50 hover:shadow-lg hover:shadow-[#13193E]/8 transition-all cursor-pointer flex flex-col"
+                    className="group bg-card rounded-2xl border border-border overflow-hidden hover:border-[#B7A362]/50 hover:shadow-lg hover:shadow-[#045D84]/8 transition-all cursor-pointer flex flex-col"
                   >
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden">
@@ -478,14 +467,14 @@ export function HomePage() {
 
                       {/* Badges */}
                       <div className="absolute top-3 right-3 flex gap-1.5 flex-wrap">
-                        <span className="px-2.5 py-1 bg-white/95 text-[#13193E] rounded-lg text-[11px] font-bold shadow-sm">
+                        <span className="px-2.5 py-1 bg-card/95 text-foreground rounded-lg text-[11px] font-bold shadow-sm">
                           {event.activityType}
                         </span>
                         {registration && registration.status !== 'cancelled' && (
-                          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-sm ${registration.status === 'registered' ? 'bg-[#00ADEF] text-white' :
+                          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-sm ${registration.status === 'registered' ? 'bg-secondary text-white' :
                               registration.status === 'waitlist' ? 'bg-orange-500 text-white' :
                                 registration.status === 'attended' ? 'bg-green-600 text-white' :
-                                  'bg-gray-500 text-white'
+                                  'bg-muted text-foreground'
                             }`}>
                             {registration.status === 'registered' && t('مسجّل', 'Registered')}
                             {registration.status === 'waitlist' && t('انتظار', 'Waitlist')}
@@ -502,7 +491,7 @@ export function HomePage() {
                             {event.registeredCount}/{event.capacity}
                           </span>
                           {isFull && !registration && (
-                            <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-black rounded">
+                            <span className="px-1.5 py-0.5 bg-destructive text-white text-[10px] font-black rounded">
                               {t('مكتمل', 'Full')}
                             </span>
                           )}
@@ -512,39 +501,39 @@ export function HomePage() {
 
                     {/* Body */}
                     <div className="p-4 flex-1 flex flex-col">
-                      <p className="text-[11px] font-bold text-[#5C2D91] mb-1.5 flex items-center gap-1">
-                        <span className="w-1 h-1 rounded-full bg-[#5C2D91]" />
+                      <p className="text-[11px] font-bold text-secondary mb-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-secondary" />
                         {event.organizer}
                       </p>
-                      <h3 className="text-base font-bold text-gray-900 mb-2 leading-snug group-hover:text-[#13193E] transition-colors line-clamp-2">
+                      <h3 className="text-base font-bold text-foreground mb-2 leading-snug group-hover:text-[#045D84] transition-colors line-clamp-2">
                         {event.title}
                       </h3>
-                      <p className="text-xs text-gray-500 mb-4 line-clamp-2 flex-1 leading-relaxed">
+                      <p className="text-xs text-muted-foreground mb-4 line-clamp-2 flex-1 leading-relaxed">
                         {event.description}
                       </p>
 
                       {/* Capacity bar */}
                       <div className="mb-3">
-                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all"
-                            style={{ width: `${fillPct}%`, background: fillPct >= 90 ? '#ef4444' : '#00ADEF' }} />
+                            style={{ width: `${fillPct}%`, background: fillPct >= 90 ? '#ef4444' : '#B7A362' }} />
                         </div>
                       </div>
 
                       {/* Meta */}
-                      <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-[11px] text-gray-500 font-medium border-t border-gray-100 pt-3">
-                        <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-[#00ADEF]" />{event.date}</span>
-                        <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-[#00ADEF]" />{event.time}</span>
+                      <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-[11px] text-muted-foreground font-medium border-t border-border pt-3">
+                        <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-[#B7A362]" />{event.date}</span>
+                        <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-[#B7A362]" />{event.time}</span>
                         <span className="flex items-center gap-1.5 col-span-2 truncate">
-                          <MapPin className="w-3 h-3 text-[#00ADEF] shrink-0" />{event.location}
+                          <MapPin className="w-3 h-3 text-[#B7A362] shrink-0" />{event.location}
                         </span>
                       </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between group-hover:bg-[#13193E] group-hover:text-white transition-colors">
-                      <span className="text-sm font-bold text-gray-600 group-hover:text-white">{t('عرض التفاصيل', 'View Details')}</span>
-                      <ChevronLeft className="w-4 h-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+                    <div className="px-4 py-3 bg-muted/30 border-t border-border flex items-center justify-between group-hover:bg-[#045D84] group-hover:text-white transition-colors">
+                      <span className="text-sm font-bold text-muted-foreground group-hover:text-white">{t('عرض التفاصيل', 'View Details')}</span>
+                      <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-white group-hover:-translate-x-1 transition-all" />
                     </div>
                   </div>
                 );
@@ -555,11 +544,10 @@ export function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#0D1130] border-t border-white/10 mt-8">
+      <footer className="bg-[#045D84] border-t border-white/10 mt-8">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Logo variant="university" className="h-7 w-auto opacity-80" />
-            <Logo variant="project" className="h-5 w-auto opacity-60 hidden sm:block" />
+            <LogoGroup variant="bare" uniSize="h-7" projSize="h-5" />
             <div>
               <p className="text-white/80 text-xs font-bold">Imamu TechVerse</p>
               <p className="text-white/30 text-[10px]">
