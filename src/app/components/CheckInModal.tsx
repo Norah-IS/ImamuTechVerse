@@ -5,7 +5,7 @@ import {
   UserX, Camera, CameraOff, ScanLine,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { parseEventQR, isEventQRActive } from '../services/eventQRService';
+import { parseEventQR, isEventQRActive, getEventQRPayload } from '../services/eventQRService';
 
 type Step = 'camera' | 'scanning' | 'verifying_location' | 'success' | 'qr_inactive' | 'wrong_event' | 'location_error';
 
@@ -239,13 +239,22 @@ export function CheckInModal({
               </div>
 
               {step === 'camera' ? (
-                <button
-                  onClick={startCamera}
-                  className="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Camera className="w-5 h-5" />
-                  {t('تشغيل الكاميرا ومسح الباركود', 'Open Camera & Scan')}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={startCamera}
+                    className="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <Camera className="w-5 h-5" />
+                    {t('تشغيل الكاميرا ومسح الباركود', 'Open Camera & Scan')}
+                  </button>
+                  <button
+                    onClick={() => handleScanned(getEventQRPayload(eventId))}
+                    className="w-full py-2.5 bg-muted border border-border text-muted-foreground font-bold rounded-xl hover:bg-secondary/10 hover:text-secondary hover:border-secondary/30 transition-all text-sm flex items-center justify-center gap-2"
+                  >
+                    <ScanLine className="w-4 h-4" />
+                    {t('محاكاة المسح — للعرض فقط', 'Simulate Scan — Demo Only')}
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={stopCamera}

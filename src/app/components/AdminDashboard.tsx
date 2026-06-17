@@ -42,6 +42,7 @@ import {
   BookOpen,
   Sparkles,
   ScanLine,
+  QrCode,
 } from 'lucide-react';
 import { LogoGroup } from './logo';
 import {
@@ -562,10 +563,10 @@ export function AdminDashboard() {
               <button
                 onClick={() => navigate('/admin/scan')}
                 className="flex items-center gap-2 px-3 py-2 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm shadow-md"
-                title="ماسح الحضور"
+                title={t('عرض QR الفعالية', 'Event QR Display')}
               >
-                <ScanLine className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('ماسح الحضور', 'Scan QR')}</span>
+                <QrCode className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('عرض QR الفعالية', 'Event QR')}</span>
               </button>
               <button
                 onClick={handleLogout}
