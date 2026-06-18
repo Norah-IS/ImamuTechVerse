@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, Info, Zap, ChevronDown } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Zap, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { mockEvents, mockRegistrations } from '../data/mockData';
@@ -267,7 +267,7 @@ export function AIChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true);
-  const [showTooltip, setShowTooltip] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -345,7 +345,7 @@ export function AIChatWidget() {
       {/* ── Floating button ── */}
       <button
         onClick={() => (isOpen ? handleClose() : setIsOpen(true))}
-        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-3 bg-[#0D1130] hover:bg-[#045D84] text-white rounded-2xl shadow-xl border border-white/10 transition-all active:scale-95 group"
+        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-3 bg-[#045D84] hover:bg-[#045D84]/90 text-white rounded-2xl shadow-xl border border-white/10 transition-all active:scale-95 group"
         aria-label={t('المساعد الذكي', 'AI Assistant')}
       >
         {isOpen ? (
@@ -356,7 +356,7 @@ export function AIChatWidget() {
             <span className="text-sm font-bold hidden sm:block">{t('المساعد الذكي', 'AI Assistant')}</span>
             <span className="flex items-center gap-1 text-[10px] bg-[#00ADEF]/20 text-[#00ADEF] px-1.5 py-0.5 rounded-full font-bold border border-[#00ADEF]/30 hidden sm:flex">
               <Zap className="w-2.5 h-2.5" />
-              {t('محلي', 'Local')}
+              {t('ذكي', 'Smart')}
             </span>
           </>
         )}
@@ -370,7 +370,7 @@ export function AIChatWidget() {
           dir={dir}
         >
           {/* Header */}
-          <div className="bg-[#0D1130] px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="bg-[#045D84] px-4 py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-[#00ADEF]/20 rounded-xl flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 text-[#00ADEF]" />
@@ -386,30 +386,11 @@ export function AIChatWidget() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* AI indicator + tooltip */}
-              <div className="relative">
-                <button
-                  onMouseEnter={() => setShowTooltip(true)}
-                  onMouseLeave={() => setShowTooltip(false)}
-                  className="flex items-center gap-1 text-[10px] bg-[#00ADEF]/15 text-[#00ADEF] px-2 py-1 rounded-full border border-[#00ADEF]/25 font-bold cursor-help"
-                >
-                  <Zap className="w-2.5 h-2.5" />
-                  {t('يعمل محلياً', 'Local AI')}
-                  <Info className="w-2.5 h-2.5 opacity-60" />
-                </button>
-                {showTooltip && (
-                  <div
-                    className="absolute bottom-full mb-2 right-0 w-52 bg-gray-900 text-white text-[11px] leading-relaxed rounded-xl p-3 shadow-xl z-10"
-                    dir={dir}
-                  >
-                    {t(
-                      'يعمل المساعد باستخدام بيانات المنصة المحلية. يمكن تفعيل الذكاء الاصطناعي التوليدي عبر API في بيئة الإنتاج.',
-                      'Assistant runs on local platform data. Generative AI can be enabled via API in production.'
-                    )}
-                    <div className="absolute -bottom-1.5 right-4 w-3 h-3 bg-gray-900 rotate-45" />
-                  </div>
-                )}
-              </div>
+              {/* AI indicator badge */}
+              <span className="flex items-center gap-1 text-[10px] bg-[#00ADEF]/15 text-[#00ADEF] px-2 py-1 rounded-full border border-[#00ADEF]/25 font-bold">
+                <Zap className="w-2.5 h-2.5" />
+                {t('ذكاء اصطناعي', 'AI')}
+              </span>
 
               <button
                 onClick={handleClose}

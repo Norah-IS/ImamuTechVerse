@@ -51,12 +51,9 @@ import {
   getBlockedUsers,
   BlockedUser,
   clearEmailLogs,
-  sendWaitlistPromotion,
-  sendCertificateEmail,
 } from '../services/emailService';
-import { recordAbsenceWithNotification, getAbsenceCount } from '../services/absenceService';
-import { autoIssueCertificatesForEvent, getIssuedCerts, markCertIssued } from '../services/certificateService';
-import { CertificateModal } from './CertificateModal';
+import { getAbsenceCount } from '../services/absenceService';
+import { autoIssueCertificatesForEvent, getIssuedCerts } from '../services/certificateService';
 import { TopBar, PageFooter } from './PageShell';
 
 // ─── Local event storage (CRUD) ───────────────────────────────────────────────
@@ -76,14 +73,16 @@ function saveEvents(events: Event[]) {
 
 // ─── Mock students for User Control ───────────────────────────────────────────
 const MOCK_STUDENTS = [
-  { id: '1', name: 'أحمد محمد العلي', email: 'ahmed.ali@imamu.edu.sa', studentId: '2024001', college: 'كلية علوم الحاسب' },
-  { id: '2', name: 'سارة خالد المطيري', email: 'sara.m@imamu.edu.sa', studentId: '2024002', college: 'كلية الهندسة' },
-  { id: '3', name: 'محمد عبدالله القحطاني', email: 'm.qhtani@imamu.edu.sa', studentId: '2024003', college: 'كلية إدارة الأعمال' },
-  { id: '4', name: 'فاطمة أحمد العمري', email: 'f.omari@imamu.edu.sa', studentId: '2024004', college: 'كلية الطب' },
-  { id: '5', name: 'عمر سعد الزهراني', email: 'o.zahrani@imamu.edu.sa', studentId: '2024005', college: 'كلية العلوم' },
-  { id: '6', name: 'نوف محمد الحربي', email: 'n.harbi@imamu.edu.sa', studentId: '2024006', college: 'كلية الآداب' },
-  { id: '7', name: 'يوسف إبراهيم الشمري', email: 'y.shimri@imamu.edu.sa', studentId: '2024007', college: 'كلية الهندسة' },
-  { id: '8', name: 'ريم سلطان العنزي', email: 'r.anazi@imamu.edu.sa', studentId: '2024008', college: 'كلية العلوم' },
+  { id: '1',  name: 'سمية محمد العلي',       email: 'samiya.ali@imamu.edu.sa', studentId: '2024001', college: 'كلية علوم الحاسب'    },
+  { id: '2',  name: 'سارة خالد المطيري',     email: 'sara.m@imamu.edu.sa',     studentId: '2024002', college: 'كلية الهندسة'         },
+  { id: '3',  name: 'محمد عبدالله القحطاني', email: 'm.qhtani@imamu.edu.sa',   studentId: '2024003', college: 'كلية إدارة الأعمال'  },
+  { id: '4',  name: 'نورة عبدالرحمن السهلي', email: 'noura.s@imamu.edu.sa',    studentId: '2023004', college: 'كلية علوم الحاسب'    },
+  { id: '5',  name: 'فاطمة محمد الدوسري',   email: 'fatima.d@imamu.edu.sa',   studentId: '2023005', college: 'كلية الهندسة'         },
+  { id: '6',  name: 'عمر سعد الغامدي',      email: 'omar.g@imamu.edu.sa',     studentId: '2023006', college: 'كلية إدارة الأعمال'  },
+  { id: '7',  name: 'ريم أحمد الزهراني',    email: 'reem.z@imamu.edu.sa',     studentId: '2024007', college: 'كلية العلوم'          },
+  { id: '8',  name: 'أحمد خالد العمري',     email: 'ahmed.e@imamu.edu.sa',    studentId: '2023008', college: 'كلية علوم الحاسب'    },
+  { id: '9',  name: 'لينا عبدالله العتيبي', email: 'lina.a@imamu.edu.sa',     studentId: '2024009', college: 'كلية الآداب'          },
+  { id: '10', name: 'خالد فهد الرشيدي',     email: 'khalid.r@imamu.edu.sa',   studentId: '2022010', college: 'كلية الطب'            },
 ];
 
 // ─── Activity types for step-1 selector ──────────────────────────────────────
@@ -161,9 +160,10 @@ function getEmailTypeIcon(type: EmailLog['type']) {
 // ─── Component ────────────────────────────────────────────────────────────────
 export function AdminDashboard() {
   const { user, logout } = useAuth();
-  const { lang, toggleLang, t } = useLanguage();
+  const { lang, t } = useLanguage();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'attendance' | 'reports' | 'notifications' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'reports' | 'visitors'>('overview');
+  const [visitorSubTab, setVisitorSubTab] = useState<'attendance' | 'notifications' | 'users'>('attendance');
 
   // Events CRUD state
   const [events, setEvents] = useState<Event[]>(getStoredEvents());
@@ -182,14 +182,6 @@ export function AdminDashboard() {
     r6: true, // pre-issued for سارة in event 4
     ...getIssuedCerts(),
   }));
-  const [adminCertModal, setAdminCertModal] = useState<{
-    studentName: string;
-    studentId: string;
-    eventTitle: string;
-    eventDate: string;
-    studentEmail: string;
-  } | null>(null);
-
   // Reports — per-event filter
   const [selectedReportEventId, setSelectedReportEventId] = useState('');
 
@@ -206,12 +198,14 @@ export function AdminDashboard() {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (activeTab === 'notifications') setEmailLogs(getEmailLogs());
-    if (activeTab === 'users') setBlockedUsers(getBlockedUsers());
-    if (activeTab === 'attendance' && !selectedEventForAttendance && events.length > 0) {
-      setSelectedEventForAttendance(events[0].id);
+    if (activeTab === 'visitors') {
+      if (visitorSubTab === 'notifications') setEmailLogs(getEmailLogs());
+      if (visitorSubTab === 'users') setBlockedUsers(getBlockedUsers());
+      if (visitorSubTab === 'attendance' && !selectedEventForAttendance && events.length > 0) {
+        setSelectedEventForAttendance(events[0].id);
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, visitorSubTab]);
 
   if (user?.role !== 'admin') return null;
 
@@ -305,82 +299,9 @@ export function AdminDashboard() {
     setShowDeleteConfirm(null);
   };
 
-  // ─── Waitlist notification ────────────────────────────────────────────────────
-  const handleNotifyWaitlist = (event: Event) => {
-    sendWaitlistPromotion({
-      recipientName: 'الطالب المنتظر',
-      recipientEmail: 'waitlist@university.edu.sa',
-      eventTitle: event.title,
-      eventDate: event.date,
-      eventTime: event.time,
-      eventLocation: event.location,
-    });
-    setEmailLogs(getEmailLogs());
-    alert(`تم إرسال ${event.waitlistCount} إشعار لمتقدمي قائمة الانتظار في فعالية "${event.title}"`);
-  };
-
   // ─── Attendance data ──────────────────────────────────────────────────────────
   const getAttendanceForEvent = (eventId: string) => {
     return attendanceData.filter(a => a.eventId === eventId);
-  };
-
-  // Mark a student absent manually (Req 36-37, 40-41)
-  const handleMarkAbsent = (entry: typeof mockAttendanceData[0]) => {
-    if (entry.checkedIn) {
-      alert('هذا الطالب قد حضر بالفعل، لا يمكن تسجيله غائباً.');
-      return;
-    }
-    const updated = attendanceData.map(a =>
-      a.registrationId === entry.registrationId ? { ...a, status: 'absent' as const } : a
-    );
-    setAttendanceData(updated);
-
-    // Record absence with full notification + possible auto-block
-    const { wasBlocked } = recordAbsenceWithNotification(entry.userId, {
-      studentName: entry.studentName,
-      studentEmail: `${entry.studentId}@imamu.edu.sa`,
-      studentId: entry.studentId,
-      eventTitle: events.find(e => e.id === entry.eventId)?.title || '',
-    });
-
-    setEmailLogs(getEmailLogs());
-    setBlockedUsers(getBlockedUsers());
-
-    if (wasBlocked) {
-      alert(`⚠️ تم حجب الزائر "${entry.studentName}" تلقائياً لمدة شهر بسبب تجاوز حد الغيابات (3 غيابات). تم إرسال إشعار تفصيلي.`);
-    } else {
-      const count = getAbsenceCount(entry.userId);
-      alert(`تم تسجيل الزائر "${entry.studentName}" غائباً. إجمالي غياباته: ${count}/3. تم إرسال تحذير بريدي.`);
-    }
-  };
-
-  // Issue certificate directly from attendance tab
-  const handleIssueCertificate = (entry: typeof mockAttendanceData[0]) => {
-    const event = events.find(e => e.id === entry.eventId);
-    if (!event) return;
-    const studentEmail = `${entry.studentId}@imamu.edu.sa`;
-
-    // Send certificate email
-    sendCertificateEmail({
-      recipientName: entry.studentName,
-      recipientEmail: studentEmail,
-      eventTitle: event.title,
-      eventDate: event.date,
-    });
-
-    // Mark as issued (in state + persistent storage)
-    markCertIssued(entry.registrationId);
-    setIssuedCertsMap(prev => ({ ...prev, [entry.registrationId]: true }));
-    setEmailLogs(getEmailLogs());
-
-    // Open preview modal
-    setAdminCertModal({
-      studentName: entry.studentName,
-      studentId: entry.studentId,
-      eventTitle: event.title,
-      eventDate: event.date,
-      studentEmail,
-    });
   };
 
   // ─── User control ─────────────────────────────────────────────────────────────
@@ -537,7 +458,7 @@ export function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <LogoGroup uniSize="h-9" projSize="h-7" />
+              <LogoGroup uniSize="h-9" projSize="h-11" />
               <div className="hidden sm:block">
                 <h1 className="text-white text-lg font-bold leading-tight">{t('بوابة المنظّم', 'Organizer Portal')} | Imamu TechVerse</h1>
                 <p className="text-xs font-semibold" style={{ color: '#00ADEF' }}>{t('جامعة الإمام محمد بن سعود الإسلامية', 'Imam Mohammad Ibn Saud Islamic University')}</p>
@@ -553,13 +474,6 @@ export function AdminDashboard() {
                   <p className="text-xs text-white/70 mt-1">{t('منظّم الفعاليات', 'Organizer')}</p>
                 </div>
               </div>
-              <button
-                onClick={toggleLang}
-                className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg transition-all"
-                title="Switch language"
-              >
-                {lang === 'ar' ? 'EN' : 'ع'}
-              </button>
               <button
                 onClick={() => navigate('/admin/scan')}
                 className="flex items-center gap-2 px-3 py-2 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm shadow-md"
@@ -582,14 +496,13 @@ export function AdminDashboard() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 flex flex-col">
         {/* ─── Navigation Tabs ─── */}
-        <div className="bg-card rounded-2xl shadow-sm border border-border p-2 mb-8 flex overflow-x-auto gap-1">
+        {/* Main navigation tabs */}
+        <div className={`bg-card rounded-2xl shadow-sm border border-border p-2 ${activeTab === 'visitors' ? 'mb-2' : 'mb-8'} flex overflow-x-auto gap-1`}>
           {[
-            { id: 'overview',      icon: BarChart3,   label: t('لوحة القيادة',    'Dashboard') },
-            { id: 'events',        icon: Calendar,    label: t('إدارة الأنشطة',   'Activities') },
-            { id: 'attendance',    icon: ListChecks,  label: t('الحضور والغياب',  'Attendance') },
-            { id: 'reports',       icon: FileText,    label: t('التقارير',        'Reports') },
-            { id: 'notifications', icon: Bell,        label: t('الإشعارات',       'Notifications'), badge: emailLogs.length },
-            { id: 'users',         icon: UserX,       label: t('متابعة الزوار',   'Visitors'), badge: blockedUsers.length > 0 ? blockedUsers.length : undefined },
+            { id: 'overview', icon: BarChart3, label: t('لوحة القيادة',  'Dashboard') },
+            { id: 'events',   icon: Calendar,  label: t('إدارة الأنشطة', 'Activities') },
+            { id: 'reports',  icon: FileText,  label: t('التقارير',      'Reports') },
+            { id: 'visitors', icon: Users,     label: t('متابعة الزوار', 'Visitor Tracking') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -602,16 +515,38 @@ export function AdminDashboard() {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
-              {tab.badge !== undefined && tab.badge > 0 && (
-                <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${
-                  activeTab === tab.id ? 'bg-white text-primary' : 'bg-secondary text-white'
-                }`}>
-                  {tab.badge > 99 ? '99+' : tab.badge}
-                </span>
-              )}
             </button>
           ))}
         </div>
+
+        {/* Visitor Tracking sub-tabs */}
+        {activeTab === 'visitors' && (
+          <div className="bg-muted/50 rounded-xl border border-border p-1.5 mb-8 flex overflow-x-auto gap-1">
+            {([
+              { id: 'attendance',    icon: ListChecks, label: t('الحضور والغياب', 'Attendance') },
+              { id: 'notifications', icon: Bell,       label: t('الإشعارات',      'Notifications'), badge: emailLogs.length },
+              { id: 'users',         icon: UserX,      label: t('متابعة الطلاب',  'Students'),      badge: blockedUsers.length > 0 ? blockedUsers.length : undefined },
+            ] as { id: 'attendance' | 'notifications' | 'users'; icon: React.ElementType; label: string; badge?: number }[]).map(sub => (
+              <button
+                key={sub.id}
+                onClick={() => setVisitorSubTab(sub.id)}
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                  visitorSubTab === sub.id
+                    ? 'bg-card text-foreground shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <sub.icon className="w-4 h-4" />
+                {sub.label}
+                {sub.badge !== undefined && sub.badge > 0 && (
+                  <span className="text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center bg-secondary text-white">
+                    {sub.badge > 99 ? '99+' : sub.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ─── Overview Tab ─── */}
         {activeTab === 'overview' && (
@@ -642,10 +577,10 @@ export function AdminDashboard() {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold flex items-center gap-2">
                   <span className="w-2 h-6 bg-secondary rounded-full"></span>
-                  أحدث الأنشطة
+                  {t('أحدث الأنشطة', 'Latest Events')}
                 </h3>
                 <button onClick={() => setActiveTab('events')} className="text-sm font-bold text-primary hover:text-secondary transition-colors">
-                  عرض الكل
+                  {t('عرض الكل', 'View all')}
                 </button>
               </div>
               <div className="space-y-4">
@@ -794,21 +729,12 @@ export function AdminDashboard() {
                               <ScanLine className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => { setSelectedEventForAttendance(event.id); setActiveTab('attendance'); }}
+                              onClick={() => { setSelectedEventForAttendance(event.id); setActiveTab('visitors'); setVisitorSubTab('attendance'); }}
                               className="p-2 bg-white border border-border text-foreground hover:bg-green-500 hover:text-white hover:border-green-500 rounded-lg transition-all"
                               title="قائمة الحضور"
                             >
                               <ListChecks className="w-4 h-4" />
                             </button>
-                            {event.registeredCount >= event.capacity && event.waitlistCount > 0 && (
-                              <button
-                                onClick={() => handleNotifyWaitlist(event)}
-                                className="p-2 bg-secondary/10 border border-secondary/20 text-secondary hover:bg-secondary hover:text-white rounded-lg transition-all"
-                                title="تنبيه قائمة الانتظار"
-                              >
-                                <Bell className="w-4 h-4" />
-                              </button>
-                            )}
                             <button
                               onClick={() => openEditModal(event)}
                               className="p-2 bg-white border border-border text-foreground hover:bg-primary hover:text-white hover:border-primary rounded-lg transition-all"
@@ -835,7 +761,7 @@ export function AdminDashboard() {
         )}
 
         {/* ─── Attendance Tab (Req 36-37) ─── */}
-        {activeTab === 'attendance' && (
+        {activeTab === 'visitors' && visitorSubTab === 'attendance' && (
           <div className="animate-in fade-in duration-300">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
               <div>
@@ -936,7 +862,6 @@ export function AdminDashboard() {
                             </tr>
                           ) : attendanceList.map((entry) => {
                             const certIssued = issuedCertsMap[entry.registrationId] ?? false;
-                            const canIssueCert = entry.checkedIn; // attended = can get cert
                             return (
                             <tr key={entry.registrationId} className="hover:bg-muted/30 transition-colors">
                               <td className="px-6 py-4">
@@ -990,14 +915,6 @@ export function AdminDashboard() {
                                   }`}>
                                     {entry.status === 'attended' ? 'حاضر' : entry.status === 'absent' ? 'غائب' : 'مسجل'}
                                   </span>
-                                  {entry.status === 'registered' && !entry.checkedIn && (
-                                    <button
-                                      onClick={() => handleMarkAbsent(entry)}
-                                      className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] font-bold rounded-lg border border-destructive/20 hover:bg-destructive hover:text-white transition-all whitespace-nowrap"
-                                    >
-                                      تسجيل غياب
-                                    </button>
-                                  )}
                                   {(() => {
                                     const ac = getAbsenceCount(entry.userId);
                                     return ac > 0 ? (
@@ -1011,36 +928,13 @@ export function AdminDashboard() {
 
                               {/* ── Certificate column ── */}
                               <td className="px-6 py-4 text-center">
-                                {!canIssueCert ? (
-                                  <span className="text-muted-foreground text-xs">—</span>
-                                ) : certIssued ? (
-                                  <button
-                                    onClick={() => {
-                                      const ev = events.find(e => e.id === entry.eventId);
-                                      if (!ev) return;
-                                      setAdminCertModal({
-                                        studentName: entry.studentName,
-                                        studentId: entry.studentId,
-                                        eventTitle: ev.title,
-                                        eventDate: ev.date,
-                                        studentEmail: `${entry.studentId}@imamu.edu.sa`,
-                                      });
-                                    }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 text-secondary rounded-lg text-xs font-bold border border-secondary/20 hover:bg-secondary hover:text-white transition-all"
-                                    title="عرض الشهادة"
-                                  >
+                                {certIssued ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 text-secondary rounded-lg text-xs font-bold border border-secondary/20">
                                     <Award className="w-3.5 h-3.5" />
-                                    عرض
-                                  </button>
+                                    {t('صدرت', 'Issued')}
+                                  </span>
                                 ) : (
-                                  <button
-                                    onClick={() => handleIssueCertificate(entry)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-white rounded-lg text-xs font-bold hover:bg-secondary/90 transition-all shadow-sm whitespace-nowrap"
-                                    title="إصدار شهادة حضور"
-                                  >
-                                    <Award className="w-3.5 h-3.5" />
-                                    إصدار
-                                  </button>
+                                  <span className="text-muted-foreground text-xs">—</span>
                                 )}
                               </td>
                             </tr>
@@ -1183,7 +1077,7 @@ export function AdminDashboard() {
         )}
 
         {/* ─── Notification Center Tab ─── */}
-        {activeTab === 'notifications' && (
+        {activeTab === 'visitors' && visitorSubTab === 'notifications' && (
           <div className="animate-in fade-in duration-300">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
               <div>
@@ -1304,7 +1198,7 @@ export function AdminDashboard() {
         )}
 
         {/* ─── Student Monitoring Tab (read-only, system auto-blocks) ─── */}
-        {activeTab === 'users' && (
+        {activeTab === 'visitors' && visitorSubTab === 'users' && (
           <div className="animate-in fade-in duration-300">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
@@ -1320,7 +1214,7 @@ export function AdminDashboard() {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="بحث بالاسم أو الرقم الجامعي..."
+                  placeholder={t('بحث بالاسم أو الرقم الجامعي...', 'Search by name or student ID...')}
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="pr-10 pl-4 py-2.5 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary text-sm font-medium w-72"
@@ -1336,7 +1230,7 @@ export function AdminDashboard() {
                 </div>
                 <div>
                   <p className="text-2xl font-black text-foreground">{MOCK_STUDENTS.length}</p>
-                  <p className="text-xs text-muted-foreground font-medium">إجمالي الطلاب</p>
+                  <p className="text-xs text-muted-foreground font-medium">{t('إجمالي الطلاب', 'Total Students')}</p>
                 </div>
               </div>
               <div className="bg-card border border-orange-200 rounded-2xl p-4 flex items-center gap-4">
@@ -1347,7 +1241,7 @@ export function AdminDashboard() {
                   <p className="text-2xl font-black text-orange-600">
                     {MOCK_STUDENTS.filter(s => getAbsenceCount(s.id) > 0 && getAbsenceCount(s.id) < 3).length}
                   </p>
-                  <p className="text-xs text-muted-foreground font-medium">طلاب لديهم غيابات</p>
+                  <p className="text-xs text-muted-foreground font-medium">{t('طلاب لديهم غيابات', 'Students with absences')}</p>
                 </div>
               </div>
               <div className="bg-card border border-destructive/20 rounded-2xl p-4 flex items-center gap-4">
@@ -1356,7 +1250,7 @@ export function AdminDashboard() {
                 </div>
                 <div>
                   <p className="text-2xl font-black text-destructive">{blockedUsers.length}</p>
-                  <p className="text-xs text-muted-foreground font-medium">طلاب موقوفون تلقائياً</p>
+                  <p className="text-xs text-muted-foreground font-medium">{t('طلاب موقوفون تلقائياً', 'Auto-suspended students')}</p>
                 </div>
               </div>
             </div>
@@ -1809,18 +1703,6 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ─── Admin Certificate Preview Modal ─── */}
-      {adminCertModal && (
-        <CertificateModal
-          isOpen={!!adminCertModal}
-          onClose={() => setAdminCertModal(null)}
-          studentName={adminCertModal.studentName}
-          eventTitle={adminCertModal.eventTitle}
-          eventDate={adminCertModal.eventDate}
-          studentId={adminCertModal.studentId}
-        />
       )}
 
       {/* ─── Delete Confirm Modal ─── */}

@@ -19,7 +19,7 @@ export function HomePage() {
   const { user, logout } = useAuth();
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'all' | 'recommended' | 'registered' | 'past'>('recommended');
+  const [activeTab, setActiveTab] = useState<'all' | 'recommended' | 'registered'>('recommended');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedCollege, setSelectedCollege] = useState<string>('');
@@ -48,8 +48,6 @@ export function HomePage() {
       events = events.filter(e => e.status === 'upcoming');
     } else if (activeTab === 'registered') {
       events = events.filter(e => registeredEventIds.includes(e.id));
-    } else if (activeTab === 'past') {
-      events = events.filter(e => e.status === 'completed');
     }
     if (searchQuery) events = events.filter(e =>
       e.title.includes(searchQuery) || e.description.includes(searchQuery) ||
@@ -127,7 +125,7 @@ export function HomePage() {
           {/* Identity row */}
           <div className="flex items-center justify-between py-3 border-b border-white/10">
             <div className="flex items-center gap-4">
-              <LogoGroup uniSize="h-9" projSize="h-9" />
+              <LogoGroup uniSize="h-9" projSize="h-11" />
               <div>
                 <div className="flex items-baseline gap-2">
                   <h1 className="text-white font-black text-lg leading-none tracking-tight">
@@ -279,7 +277,7 @@ export function HomePage() {
                     {t('لوحة الكليات المتميزة', 'Top Colleges Leaderboard')}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {t('النقاط = حضور ×٣ + تسجيل ×١ + تقييم ×٢', 'Points = Attendance ×3 + Registrations ×1 + Ratings ×2')}
+                    {t('مشاركة الكليات في الأنشطة', 'College participation across activities')}
                   </p>
                 </div>
               </div>
@@ -293,10 +291,8 @@ export function HomePage() {
                     'from-gray-50 border-gray-200',
                     'from-orange-50 border-orange-200',
                   ];
-                  const accentColors = ['text-yellow-600', 'text-gray-500', 'text-orange-500'];
                   const medal = medals[idx] ?? `#${idx + 1}`;
                   const cardGrad = medalColors[idx] ?? 'from-blue-50 border-blue-100';
-                  const accent = accentColors[idx] ?? 'text-[#B7A362]';
 
                   return (
                     <div
@@ -309,23 +305,17 @@ export function HomePage() {
                         <p className="font-bold text-foreground text-sm leading-tight line-clamp-2">{college.name}</p>
                       </div>
 
-                      {/* Points badge */}
-                      <div className={`text-2xl font-black ${accent}`}>
-                        {college.points} <span className="text-xs font-bold text-muted-foreground">{t('نقطة', 'pts')}</span>
-                      </div>
-
                       {/* Breakdown */}
                       <div className="space-y-1 pt-1 border-t border-border/20">
                         {[
-                          { icon: Users,    value: college.attended,  label: t('حضور', 'Attended'),   mult: '×٣' },
-                          { icon: Building2, value: college.registered, label: t('تسجيل', 'Registered'), mult: '×١' },
-                          { icon: Star,     value: college.feedback,  label: t('تقييم', 'Ratings'),   mult: '×٢' },
-                        ].map(({ icon: Icon, value, label, mult }) => (
+                          { icon: Users,     value: college.attended,  label: t('حضور', 'Attended') },
+                          { icon: Building2, value: college.registered, label: t('تسجيل', 'Registered') },
+                          { icon: Star,      value: college.feedback,  label: t('تقييم', 'Ratings') },
+                        ].map(({ icon: Icon, value, label }) => (
                           <div key={label} className="flex items-center justify-between text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Icon className="w-3 h-3 text-muted-foreground/60" />
                               <span>{label}</span>
-                              <span className="text-muted-foreground/40">{mult}</span>
                             </div>
                             <span className="font-bold text-foreground">{value}</span>
                           </div>
@@ -352,7 +342,6 @@ export function HomePage() {
                   { id: 'recommended', label: t('موصى بها', 'Recommended') },
                   { id: 'all', label: t('جميع الأنشطة', 'All Activities') },
                   { id: 'registered', label: t('مسجّل بها', 'Registered'), badge: myRegistrations.filter(r => r.status === 'registered').length },
-                  { id: 'past', label: t('الأرشيف', 'Archive') },
                 ].map(tab => (
                   <button
                     key={tab.id}

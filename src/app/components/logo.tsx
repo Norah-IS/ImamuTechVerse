@@ -38,8 +38,8 @@ export function LogoGroup({
 
   return (
     <div className="flex items-center gap-2 shrink-0">
-      <div className="bg-white rounded-xl p-1.5 shadow-inner">{uniImg}</div>
-      <div className="bg-white/10 rounded-xl p-1.5 border border-white/10">{projImg}</div>
+      {uniImg}
+      {projImg}
     </div>
   );
 }

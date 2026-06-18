@@ -20,7 +20,7 @@ import {
   QrCode,
   ChevronRight,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+
 import { Toaster } from 'sonner';
 import { TopBar, PageFooter } from './PageShell';
 import { LogoGroup } from './logo';
@@ -83,8 +83,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
         <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
           <AlertCircle className="w-10 h-10 text-muted-foreground" />
         </div>
-        <h2 className="text-2xl font-bold mb-4 text-foreground">عذراً، النشاط غير موجود</h2>
-        <p className="text-muted-foreground mb-8 text-center max-w-sm">يبدو أن النشاط الذي تبحث عنه قد تم إلغاؤه أو إزالة الرابط الخاص به.</p>
+        <h2 className="text-2xl font-bold mb-4 text-foreground">{t('عذراً، النشاط غير موجود', 'Activity Not Found')}</h2>
+        <p className="text-muted-foreground mb-8 text-center max-w-sm">{t('يبدو أن النشاط الذي تبحث عنه قد تم إلغاؤه أو إزالة الرابط الخاص به.', 'The activity you are looking for may have been cancelled or its link removed.')}</p>
         <button
           onClick={() => navigate(adminView ? '/admin' : '/')}
           className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all flex items-center gap-2"
@@ -315,8 +315,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
   };
 
   const statusBadge = () => {
-    if (event.status === 'cancelled') return <span className="px-4 py-1.5 bg-destructive/80 text-white rounded-xl text-sm font-bold">ملغاة</span>;
-    if (event.status === 'completed') return <span className="px-4 py-1.5 bg-muted text-muted-foreground rounded-xl text-sm font-bold">منتهية</span>;
+    if (event.status === 'cancelled') return <span className="px-4 py-1.5 bg-destructive/80 text-white rounded-xl text-sm font-bold">{t('ملغاة', 'Cancelled')}</span>;
+    if (event.status === 'completed') return <span className="px-4 py-1.5 bg-muted text-muted-foreground rounded-xl text-sm font-bold">{t('منتهية', 'Ended')}</span>;
     return null;
   };
 
@@ -508,11 +508,11 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
               {/* Sidebar */}
               <div className="lg:w-80 space-y-6">
                 <div className="bg-card border-2 border-border rounded-3xl p-6 shadow-md hover:border-primary/50 transition-colors">
-                  <h4 className="text-sm font-bold text-muted-foreground mb-4">حالة التسجيل والمشاركة</h4>
-                  
+                  <h4 className="text-sm font-bold text-muted-foreground mb-4">{t('حالة التسجيل والمشاركة', 'Registration & Participation')}</h4>
+
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-2xl text-foreground">{event.registeredCount}</span>
-                    <span className="text-sm font-medium text-muted-foreground">من {event.capacity} مقعد</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t(`من ${event.capacity} مقعد`, `of ${event.capacity} seats`)}</span>
                   </div>
                   
                   <div className="w-full bg-muted rounded-full h-3 mb-6 overflow-hidden">
@@ -525,8 +525,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   {/* قائمة الانتظار — تظهر فقط إذا امتلأت المقاعد الأساسية */}
                   {isFull && event.waitlistCount > 0 && (
                     <div className="flex items-center justify-between text-sm font-medium text-orange-600 bg-orange-50 px-4 py-2 rounded-xl mb-6 border border-orange-100">
-                      <span className="flex items-center gap-2"><AlertCircle className="w-4 h-4" /> قائمة الانتظار</span>
-                      <span>{event.waitlistCount} طالب</span>
+                      <span className="flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {t('قائمة الانتظار', 'Waitlist')}</span>
+                      <span>{event.waitlistCount} {t('طالب', 'students')}</span>
                     </div>
                   )}
 
@@ -534,7 +534,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   {!adminView && isBlocked && (
                     <div className="w-full py-3.5 bg-destructive/10 border-2 border-destructive/30 text-destructive font-bold rounded-xl flex items-center justify-center gap-2 text-sm mb-3">
                       <Ban className="w-5 h-5" />
-                      حسابك محظور مؤقتاً - لا يمكن التسجيل
+                      {t('حسابك محظور مؤقتاً - لا يمكن التسجيل', 'Account suspended — registration unavailable')}
                     </div>
                   )}
 
@@ -543,21 +543,19 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                     {!adminView && !myRegistration && event.status === 'upcoming' && !isBlocked && (
                       event.needsVolunteers && !isFull ? (
                         <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground text-center font-medium">اختر طريقة المشاركة</p>
+                          <p className="text-xs text-muted-foreground text-center font-medium">{t('اختر طريقة المشاركة', 'Choose participation type')}</p>
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={() => doRegister('attendee')}
                               className="py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 text-sm flex flex-col items-center gap-0.5"
                             >
-                              <span>حضور</span>
-                              <span className="text-[10px] font-normal opacity-80">Attendee</span>
+                              <span>{t('حضور', 'Attendee')}</span>
                             </button>
                             <button
                               onClick={() => doRegister('volunteer')}
                               className="py-3 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 text-sm flex flex-col items-center gap-0.5"
                             >
-                              <span>متطوع</span>
-                              <span className="text-[10px] font-normal opacity-80">Volunteer</span>
+                              <span>{t('متطوع', 'Volunteer')}</span>
                             </button>
                           </div>
                         </div>
@@ -575,8 +573,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                       )
                     )}
 
-                    {/* ── مسجّل ولم يحضر بعد ── */}
-                    {!adminView && isRegistered && event.status === 'upcoming' && !checkedIn && (
+                    {/* ── مسجّل (حضور أو تطوع) ولم يحضر بعد ── */}
+                    {!adminView && myRegistration?.status === 'registered' && (event.status === 'upcoming' || event.status === 'ongoing') && !checkedIn && (
                       <>
                         <button
                           onClick={handleCancelRegistration}
@@ -603,8 +601,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                             <CheckCircle className="w-5 h-5 text-green-600" />
                           </div>
                           <div>
-                            <p className="font-bold text-sm">تم تأكيد حضورك ✓</p>
-                            <p className="text-xs text-green-600/80">لا تنسَ تسجيل المغادرة عند انتهاء الفعالية</p>
+                            <p className="font-bold text-sm">{t('تم تأكيد حضورك ✓', 'Attendance confirmed ✓')}</p>
+                            <p className="text-xs text-green-600/80">{t('لا تنسَ تسجيل المغادرة عند انتهاء الفعالية', "Don't forget to check out when the event ends")}</p>
                           </div>
                         </div>
 
@@ -613,7 +611,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                           className="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group"
                         >
                           <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                          تسجيل المغادرة
+                          {t('تسجيل المغادرة', 'Check Out')}
                         </button>
                       </div>
                     )}
@@ -622,7 +620,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                     {!adminView && checkedOut && myRegistration?.feedbackSubmitted && (
                       <div className="w-full py-3 bg-green-50 border-2 border-green-200 text-green-700 font-bold rounded-xl flex items-center justify-center gap-2 text-sm">
                         <CheckCircle className="w-5 h-5" />
-                        تم تسجيل المغادرة والتقييم
+                        {t('تم تسجيل المغادرة والتقييم', 'Checked out and evaluated')}
                       </div>
                     )}
 
@@ -633,7 +631,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                         className="w-full py-3.5 bg-white border-2 border-secondary text-secondary font-bold rounded-xl hover:bg-secondary/10 transition-all flex items-center justify-center gap-2 group"
                       >
                         <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
-                        تحميل شهادة الحضور (PDF)
+                        {t('تحميل شهادة الحضور (PDF)', 'Download Attendance Certificate (PDF)')}
                       </button>
                     )}
 
@@ -676,54 +674,31 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   </div>
                 </div>
 
-                {/* QR code ticket — shown to registered visitor */}
-                {!adminView && (isRegistered || isWaitlisted) && myRegistration && (
-                  <div className="bg-card border-2 border-secondary/30 rounded-3xl p-5 shadow-md text-center">
-                    <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">تذكرة الدخول</p>
-                    <p className="text-sm font-bold text-foreground mb-4 truncate">{event.title}</p>
-                    <div className="flex justify-center mb-4">
-                      <div className="p-3 bg-white rounded-2xl shadow-inner border border-border">
-                        <QRCodeSVG
-                          value={`IMAMU:${event.id}:${myRegistration.id}:${user?.id}`}
-                          size={160}
-                          level="M"
-                          includeMargin={false}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono">{myRegistration.id}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {isWaitlisted ? '⏳ في قائمة الانتظار' : '✅ مسجّل — اعرض هذا الكود عند الدخول'}
-                    </p>
-                  </div>
-                )}
-
                 {/* Attendance stats (always visible) */}
                 <div className="bg-muted/40 border border-border rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Users className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-bold text-foreground">إحصائيات الحضور</span>
+                    <span className="text-sm font-bold text-foreground">{t('إحصائيات الحضور', 'Attendance Stats')}</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">المسجلون</span>
+                      <span className="text-muted-foreground">{t('المسجلون', 'Registered')}</span>
                       <span className="font-bold text-foreground">{event.registeredCount}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">الطاقة الاستيعابية</span>
+                      <span className="text-muted-foreground">{t('الطاقة الاستيعابية', 'Capacity')}</span>
                       <span className="font-bold text-foreground">{event.capacity}</span>
                     </div>
-                    {/* قائمة الانتظار في البانل الجانبي — فقط عند امتلاء المقاعد */}
                     {isFull && event.waitlistCount > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-orange-600">قائمة الانتظار</span>
+                        <span className="text-orange-600">{t('قائمة الانتظار', 'Waitlist')}</span>
                         <span className="font-bold text-orange-600">{event.waitlistCount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">المقاعد المتبقية</span>
+                      <span className="text-muted-foreground">{t('المقاعد المتبقية', 'Seats remaining')}</span>
                       <span className={`font-bold ${isFull ? 'text-destructive' : 'text-green-600'}`}>
-                        {isFull ? 'مكتمل' : event.capacity - event.registeredCount}
+                        {isFull ? t('مكتمل', 'Full') : event.capacity - event.registeredCount}
                       </span>
                     </div>
                   </div>
@@ -742,8 +717,8 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
                 <Star className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-1">استبيان التقييم</h3>
-              <p className="text-white/80 text-sm">تقييمك إلزامي للحصول على شهادة الحضور (المتطلب 31)</p>
+              <h3 className="text-2xl font-bold mb-1">{t('استبيان التقييم', 'Evaluation Survey')}</h3>
+              <p className="text-white/80 text-sm">{t('تقييمك إلزامي للحصول على شهادة الحضور', 'Evaluation required to receive your attendance certificate')}</p>
             </div>
 
             <div className="px-8 py-6 overflow-y-auto flex-1">
@@ -753,20 +728,20 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   onClick={() => setFeedbackType('event')}
                   className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${feedbackType === 'event' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
                 >
-                  تقييم الفعالية
+                  {t('تقييم الفعالية', 'Event Rating')}
                 </button>
                 <button
                   onClick={() => setFeedbackType('organizer')}
                   className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${feedbackType === 'organizer' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
                 >
-                  تقييم المنظمين
+                  {t('تقييم المنظمين', 'Organizer Rating')}
                 </button>
               </div>
 
               {feedbackType === 'event' && (
                 <div className="space-y-5">
                   <div className="flex flex-col items-center">
-                    <label className="block mb-3 font-bold text-sm text-center">تقييم الفعالية الإجمالي</label>
+                    <label className="block mb-3 font-bold text-sm text-center">{t('تقييم الفعالية الإجمالي', 'Overall Event Rating')}</label>
                     <div className="flex gap-2 justify-center" dir="ltr">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -792,13 +767,13 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   </div>
 
                   <div>
-                    <label className="block mb-2 font-bold text-sm">ملاحظاتك ومقترحاتك</label>
+                    <label className="block mb-2 font-bold text-sm">{t('ملاحظاتك ومقترحاتك', 'Your notes and suggestions')}</label>
                     <textarea
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       className="w-full px-4 py-3 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
                       rows={3}
-                      placeholder="شاركنا رأيك بصدق وشفافية..."
+                      placeholder={t('شاركنا رأيك بصدق وشفافية...', 'Share your honest feedback...')}
                     />
                   </div>
                 </div>
@@ -807,7 +782,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
               {feedbackType === 'organizer' && (
                 <div className="space-y-5">
                   <div className="flex flex-col items-center">
-                    <label className="block mb-3 font-bold text-sm text-center">تقييم أداء المنظمين</label>
+                    <label className="block mb-3 font-bold text-sm text-center">{t('تقييم أداء المنظمين', 'Organizer Performance Rating')}</label>
                     <div className="flex gap-2 justify-center" dir="ltr">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button

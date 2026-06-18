@@ -17,7 +17,6 @@ import {
   Maximize2, Minimize2, CheckCircle2,
 } from 'lucide-react';
 import { LogoGroup } from './logo';
-import { LanguageToggle } from './LanguageToggle';
 
 export function OrganizerScannerPage() {
   const { user } = useAuth();
@@ -105,12 +104,11 @@ export function OrganizerScannerPage() {
             <ArrowRight className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
-            <LanguageToggle variant="light" />
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-white font-bold text-sm leading-tight">{t('عرض QR الفعالية', 'Event QR Display')}</span>
               <span className="text-white/50 text-[11px]">{t('يمسح الحاضرون الكود بأنفسهم', 'Attendees self-scan this code')}</span>
             </div>
-            <LogoGroup uniSize="h-7" projSize="h-6" />
+            <LogoGroup uniSize="h-7" projSize="h-9" />
           </div>
         </div>
       </header>

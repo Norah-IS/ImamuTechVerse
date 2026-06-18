@@ -25,7 +25,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Logo, LogoGroup } from './logo';
-import { LanguageToggle } from './LanguageToggle';
 import { useLanguage } from '../context/LanguageContext';
 import { TopBar, PageFooter } from './PageShell';
 import { sendCertificateEmail } from '../services/emailService';
@@ -37,9 +36,9 @@ import { NotificationPanel } from './NotificationPanel';
 
 export function UserProfilePage() {
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'events' | 'vault' | 'attendance' | 'record'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'vault' | 'record'>('events');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [certModal, setCertModal] = useState<{ eventTitle: string; eventDate: string } | null>(null);
 
@@ -111,7 +110,7 @@ export function UserProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F4F6F9] flex flex-col font-sans" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <TopBar />
       <Toaster position="top-center" richColors />
 
@@ -138,10 +137,9 @@ export function UserProfilePage() {
               <ArrowRight className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
-              <LanguageToggle variant="light" />
               <span className="text-white font-bold hidden sm:block">{t('ملفي الشخصي', 'My Profile')}</span>
               {user && <NotificationPanel userId={user.id} />}
-              <LogoGroup uniSize="h-7" projSize="h-6" />
+              <LogoGroup uniSize="h-7" projSize="h-9" />
             </div>
           </div>
         </div>
@@ -160,7 +158,7 @@ export function UserProfilePage() {
             ></div>
           </div>
           <div className="px-6 pb-6">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-14 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 -mt-14 mb-6">
               <div className="w-24 h-24 bg-white rounded-2xl border-4 border-white shadow-xl flex items-center justify-center shrink-0">
                 <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/20 rounded-xl flex items-center justify-center">
                   <span className="text-3xl font-black text-primary">
@@ -168,14 +166,14 @@ export function UserProfilePage() {
                   </span>
                 </div>
               </div>
-              <div className="sm:mb-1 flex-1">
-                <h2 className="text-2xl font-black text-foreground">{user?.name}</h2>
+              <div className="sm:pt-14 sm:pb-1 flex-1 min-w-0">
+                <h2 className="text-2xl font-black text-foreground leading-tight">{user?.name}</h2>
                 <p className="text-muted-foreground text-sm font-medium">{user?.college}</p>
               </div>
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-xl border border-primary/10">
                 <ShieldCheck className="w-4 h-4 text-primary" />
                 <span className="text-sm font-bold text-primary">
-                  {blocked ? 'محظور مؤقتاً' : 'طالب نشط'}
+                  {blocked ? t('محظور مؤقتاً', 'Suspended') : t('طالب نشط', 'Active Student')}
                 </span>
               </div>
             </div>
@@ -186,8 +184,8 @@ export function UserProfilePage() {
                   <Mail className="w-4 h-4 text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">البريد الإلكتروني</p>
-                  <p className="text-sm font-bold text-foreground truncate">{user?.email}</p>
+                  <p className="text-xs text-muted-foreground">{t('البريد الإلكتروني', 'Email')}</p>
+                  <p className="text-sm font-bold text-foreground break-all">{user?.email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
@@ -195,7 +193,7 @@ export function UserProfilePage() {
                   <BookOpen className="w-4 h-4 text-secondary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">الرقم الجامعي</p>
+                  <p className="text-xs text-muted-foreground">{t('الرقم الجامعي', 'Student ID')}</p>
                   <p className="text-sm font-bold text-foreground">{user?.studentId || '2024001'}</p>
                 </div>
               </div>
@@ -207,8 +205,8 @@ export function UserProfilePage() {
                   <Trophy className="w-4 h-4" style={{ color: '#00ADEF' }} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">الفعاليات المكتملة</p>
-                  <p className="text-sm font-bold text-foreground">{attendedEvents.length} فعالية</p>
+                  <p className="text-xs text-muted-foreground">{t('الفعاليات المكتملة', 'Completed Events')}</p>
+                  <p className="text-sm font-bold text-foreground">{attendedEvents.length} {t('فعالية', 'events')}</p>
                 </div>
               </div>
             </div>
@@ -227,8 +225,8 @@ export function UserProfilePage() {
             <GraduationCap className="w-5 h-5 shrink-0" />
             <p className="text-sm font-bold">
               {blocked
-                ? `حسابك محظور مؤقتاً بسبب ${absenceCount} غيابات. يرجى مراجعة إدارة شؤون الطلاب.`
-                : `لديك ${absenceCount} غياب(ات). عند الوصول لـ 3 غيابات سيتم تعليق حسابك.`}
+                ? t(`حسابك محظور مؤقتاً بسبب ${absenceCount} غيابات. يرجى مراجعة إدارة شؤون الطلاب.`, `Your account is suspended due to ${absenceCount} absences. Please contact Student Affairs.`)
+                : t(`لديك ${absenceCount} غياب(ات). عند الوصول لـ 3 غيابات سيتم تعليق حسابك.`, `You have ${absenceCount} absence(s). Your account will be suspended at 3 absences.`)}
             </p>
           </div>
         )}
@@ -236,9 +234,9 @@ export function UserProfilePage() {
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: 'المسجلة', value: registeredEvents.length, color: 'text-primary', bg: 'bg-primary/10', icon: Calendar },
-            { label: 'الانتظار', value: waitlistEvents.length, color: 'text-orange-600', bg: 'bg-orange-50', icon: Clock3 },
-            { label: 'الشهادات', value: certificateEvents.length, color: 'text-secondary', bg: 'bg-secondary/10', icon: Award },
+            { label: t('المسجلة', 'Registered'), value: registeredEvents.length, color: 'text-primary', bg: 'bg-primary/10', icon: Calendar },
+            { label: t('الانتظار', 'Waitlist'), value: waitlistEvents.length, color: 'text-orange-600', bg: 'bg-orange-50', icon: Clock3 },
+            { label: t('الشهادات', 'Certificates'), value: certificateEvents.length, color: 'text-secondary', bg: 'bg-secondary/10', icon: Award },
           ].map((stat, i) => (
             <div key={i} className="bg-card border border-border rounded-2xl p-4 text-center shadow-sm">
               <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center mx-auto mb-2`}>
@@ -253,10 +251,9 @@ export function UserProfilePage() {
         {/* Tabs */}
         <div className="bg-card rounded-2xl border border-border shadow-sm mb-6 p-1.5 flex">
           {[
-            { id: 'events',     label: t('أنشطتي', 'My Activities'),              icon: Calendar },
-            { id: 'vault',      label: t('خزنة الشهادات', 'Certificates'),        icon: Award },
-            { id: 'attendance', label: t('سجل الحضور', 'Attendance'),             icon: CheckCircle },
-            { id: 'record',     label: t('السجل اللامنهجي', 'Activity Record'),   icon: ClipboardList },
+            { id: 'events',  label: t('أنشطتي', 'My Activities'),            icon: Calendar },
+            { id: 'vault',   label: t('خزنة الشهادات', 'Certificates'),      icon: Award },
+            { id: 'record',  label: t('السجل اللامنهجي', 'Activity Record'), icon: ClipboardList },
           ].map(tab => (
             <button
               key={tab.id}
@@ -281,19 +278,18 @@ export function UserProfilePage() {
             <div>
               <h3 className="text-base font-bold flex items-center gap-2 mb-4 text-foreground">
                 <span className="w-2 h-6 bg-primary rounded-full shrink-0"></span>
-                <span>مسجّل / قادم</span>
-                <span className="text-xs font-normal text-muted-foreground">Registered &amp; Upcoming</span>
+                <span>{t('مسجّل / قادم', 'Registered & Upcoming')}</span>
                 <span className="mr-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{upcomingMyEvents.length}</span>
               </h3>
               {upcomingMyEvents.length === 0 ? (
-                <EmptyState icon={Calendar} message="لا توجد أنشطة قادمة" subMessage="سجّل في نشاط لتراه هنا" />
+                <EmptyState icon={Calendar} message={t('لا توجد أنشطة قادمة', 'No upcoming activities')} subMessage={t('سجّل في نشاط لتراه هنا', 'Register for an activity to see it here')} />
               ) : (
                 <div className="space-y-3">
                   {upcomingMyEvents.map(event => {
                     const reg = myRegistrations.find(r => r.eventId === event.id)!;
-                    const statusLabel = reg.status === 'waitlist' ? 'انتظار'
-                      : reg.status === 'attended' ? 'في الفعالية'
-                      : 'مسجّل';
+                    const statusLabel = reg.status === 'waitlist' ? t('انتظار', 'Waitlist')
+                      : reg.status === 'attended' ? t('في الفعالية', 'Attending')
+                      : t('مسجّل', 'Registered');
                     const statusColor = reg.status === 'waitlist'
                       ? 'bg-orange-50 text-orange-600 border-orange-200'
                       : reg.status === 'attended'
@@ -317,7 +313,7 @@ export function UserProfilePage() {
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${statusColor}`}>{statusLabel}</span>
                           {reg.registrationRole === 'volunteer' && (
-                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-teal-50 text-teal-700 border-teal-200">متطوع</span>
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-teal-50 text-teal-700 border-teal-200">{t('متطوع', 'Volunteer')}</span>
                           )}
                         </div>
                       </div>
@@ -331,12 +327,11 @@ export function UserProfilePage() {
             <div>
               <h3 className="text-base font-bold flex items-center gap-2 mb-4 text-foreground">
                 <span className="w-2 h-6 bg-muted-foreground/40 rounded-full shrink-0"></span>
-                <span>مكتمل / منتهي</span>
-                <span className="text-xs font-normal text-muted-foreground">Completed &amp; Past</span>
+                <span>{t('مكتمل / منتهي', 'Completed & Past')}</span>
                 <span className="mr-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{pastMyEvents.length}</span>
               </h3>
               {pastMyEvents.length === 0 ? (
-                <EmptyState icon={CheckCircle} message="لا توجد أنشطة منتهية بعد" />
+                <EmptyState icon={CheckCircle} message={t('لا توجد أنشطة منتهية بعد', 'No past activities yet')} />
               ) : (
                 <div className="space-y-3">
                   {pastMyEvents.map(event => {
@@ -359,15 +354,15 @@ export function UserProfilePage() {
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           {reg.status === 'attended' ? (
                             <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-green-50 text-green-700 border-green-200">
-                              <CheckCircle className="w-3 h-3 inline ml-1" />حضر
+                              <CheckCircle className="w-3 h-3 inline ml-1" />{t('حضر', 'Attended')}
                             </span>
                           ) : (
                             <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-muted text-muted-foreground border-border">
-                              {reg.status === 'absent' ? 'غائب' : 'منتهية'}
+                              {reg.status === 'absent' ? t('غائب', 'Absent') : t('منتهية', 'Ended')}
                             </span>
                           )}
                           {reg.registrationRole === 'volunteer' && (
-                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-teal-50 text-teal-700 border-teal-200">متطوع</span>
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-teal-50 text-teal-700 border-teal-200">{t('متطوع', 'Volunteer')}</span>
                           )}
                         </div>
                       </div>
@@ -394,8 +389,8 @@ export function UserProfilePage() {
                   <Award className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">خزنة الشهادات</h3>
-                  <p className="text-white/80 text-sm">شهاداتك الموثقة من جامعة الإمام محمد بن سعود الإسلامية</p>
+                  <h3 className="text-xl font-bold">{t('خزنة الشهادات', 'Certificate Vault')}</h3>
+                  <p className="text-white/80 text-sm">{t('شهاداتك الموثقة من جامعة الإمام محمد بن سعود الإسلامية', 'Your verified certificates from Imam Muhammad ibn Saud Islamic University')}</p>
                 </div>
               </div>
             </div>
@@ -403,8 +398,8 @@ export function UserProfilePage() {
             {certificateEvents.length === 0 ? (
               <EmptyState
                 icon={Award}
-                message="لا توجد شهادات متاحة حتى الآن"
-                subMessage="احضر الفعاليات وقيّمها للحصول على شهادة إتمام"
+                message={t('لا توجد شهادات متاحة حتى الآن', 'No certificates yet')}
+                subMessage={t('احضر الفعاليات وقيّمها للحصول على شهادة إتمام', 'Attend and evaluate events to earn completion certificates')}
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -428,7 +423,7 @@ export function UserProfilePage() {
                         ></div>
                         <div className="text-center relative z-10">
                           <Award className="w-8 h-8 text-white mx-auto mb-1" />
-                          <p className="text-white/90 text-xs font-bold">شهادة حضور</p>
+                          <p className="text-white/90 text-xs font-bold">{t('شهادة حضور', 'Attendance Certificate')}</p>
                         </div>
                         <div className="absolute bottom-2 left-3 right-3 flex items-center gap-1">
                           <div className="h-0.5 flex-1 rounded" style={{ backgroundColor: '#00ADEF', opacity: 0.6 }}></div>
@@ -448,75 +443,15 @@ export function UserProfilePage() {
                         {isDownloading ? (
                           <>
                             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            جاري الإرسال...
+                            {t('جاري الإرسال...', 'Sending...')}
                           </>
                         ) : (
                           <>
                             <Download className="w-4 h-4" />
-                            تحميل وإرسال للبريد
+                            {t('تحميل وإرسال للبريد', 'Download & Send by Email')}
                           </>
                         )}
                       </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Attendance History Tab */}
-        {activeTab === 'attendance' && (
-          <div className="animate-in fade-in duration-300">
-            <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-              <span className="w-2 h-6 bg-green-500 rounded-full"></span>
-              سجل الحضور والمشاركة في الأنشطة ({attendedEvents.length})
-            </h3>
-            {attendedEvents.length === 0 ? (
-              <EmptyState
-                icon={CheckCircle}
-                message="لا يوجد سجل حضور حتى الآن"
-                subMessage="سيظهر هنا تاريخ حضورك للأنشطة المكتملة"
-              />
-            ) : (
-              <div className="space-y-4">
-                {attendedEvents.map(event => {
-                  const reg = myRegistrations.find(r => r.eventId === event.id)!;
-                  return (
-                    <div
-                      key={event.id}
-                      className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center shadow-sm"
-                    >
-                      <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-border">
-                        <img src={event.image} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-foreground mb-1 line-clamp-1">{event.title}</h4>
-                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {event.date}</span>
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                        {reg.checkedIn && !reg.checkedOut && (
-                          <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold border border-primary/20">
-                            في الفعالية
-                          </span>
-                        )}
-                        {reg.checkedOut && (
-                          <span className="flex items-center gap-1 px-3 py-1 bg-muted text-muted-foreground rounded-lg text-xs font-bold border border-border">
-                            غادر
-                          </span>
-                        )}
-                        {reg.feedbackSubmitted && (
-                          <span className="flex items-center gap-1 px-3 py-1 bg-secondary/10 text-secondary rounded-lg text-xs font-bold border border-secondary/20">
-                            <Star className="w-3 h-3" /> تم التقييم
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-200">
-                          <CheckCircle className="w-3 h-3" /> حضر
-                        </span>
-                      </div>
                     </div>
                   );
                 })}
@@ -563,7 +498,7 @@ export function UserProfilePage() {
                     </p>
                   </div>
                   <div className="bg-muted/40 border border-border/60 rounded-xl p-4 flex flex-col justify-center">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">المستوى الحالي</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('المستوى الحالي', 'Current Level')}</p>
                     <p className="text-sm font-bold text-foreground leading-snug">{currentLevel.titleAr}</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">{currentLevel.titleEn}</p>
                   </div>
@@ -582,8 +517,8 @@ export function UserProfilePage() {
                       <p className="text-2xl font-black text-teal-700 tabular-nums">{volunteerHours.toFixed(1)}</p>
                       <p className="text-xs text-teal-600/70">
                         {volunteerEntries.length > 0
-                          ? `من ${volunteerEntries.length} نشاط تطوعي`
-                          : 'لم تشارك كمتطوع بعد'}
+                          ? t(`من ${volunteerEntries.length} نشاط تطوعي`, `from ${volunteerEntries.length} volunteer activity`)
+                          : t('لم تشارك كمتطوع بعد', 'No volunteer activities yet')}
                       </p>
                     </div>
                   </div>
@@ -594,10 +529,10 @@ export function UserProfilePage() {
                   <div>
                     <div className="flex justify-between items-baseline mb-2">
                       <p className="text-xs text-muted-foreground">
-                        التقدم نحو: <span className="font-bold text-foreground">{nextLevel.titleAr}</span>
+                        {t('التقدم نحو:', 'Progress to:')} <span className="font-bold text-foreground">{lang === 'ar' ? nextLevel.titleAr : nextLevel.titleEn}</span>
                       </p>
                       <p className="text-xs font-mono text-muted-foreground">
-                        {(actRec?.totalHours ?? 0).toFixed(1)} / {nextLevel.minHours} ساعة
+                        {(actRec?.totalHours ?? 0).toFixed(1)} / {nextLevel.minHours} {t('ساعة', 'hrs')}
                       </p>
                     </div>
                     <ProgressPrimitive.Root
@@ -613,7 +548,7 @@ export function UserProfilePage() {
                 ) : (
                   <div className="flex items-center gap-2 p-3 bg-secondary/5 border border-secondary/20 rounded-xl">
                     <TrendingUp className="w-4 h-4 text-secondary shrink-0" />
-                    <p className="text-sm font-bold text-secondary">أعلى مستوى — Campus Life Ambassador</p>
+                    <p className="text-sm font-bold text-secondary">{t('أعلى مستوى — Campus Life Ambassador', 'Top Level — Campus Life Ambassador')}</p>
                   </div>
                 )}
               </div>
@@ -649,11 +584,10 @@ export function UserProfilePage() {
               <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center justify-between">
                 <p className="text-xs font-bold text-foreground uppercase tracking-wider">سجل الأنشطة الموثّقة / Verified Activity Log</p>
                 <p className="text-xs text-muted-foreground">
-                  {/* Only count entries for ended events */}
                   {(actRec?.entries ?? []).filter(e => {
                     const ev = mockEvents.find(ev => ev.id === e.eventId);
                     return ev ? hasEventEnded(ev) : e.eventDate < new Date().toISOString().split('T')[0];
-                  }).length} نشاط مكتمل
+                  }).length} {t('نشاط مكتمل', 'completed activities')}
                 </p>
               </div>
               {(() => {
@@ -664,8 +598,8 @@ export function UserProfilePage() {
                 return endedEntries.length === 0 ? (
                   <div className="py-12 text-center">
                     <ClipboardList className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">لا توجد أنشطة مكتملة ومحسوبة بعد</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">تُحسَب الساعات بعد انتهاء النشاط فقط</p>
+                    <p className="text-sm text-muted-foreground">{t('لا توجد أنشطة مكتملة ومحسوبة بعد', 'No completed activities recorded yet')}</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">{t('تُحسَب الساعات بعد انتهاء النشاط فقط', 'Hours are counted only after the activity ends')}</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-border/60">
@@ -677,14 +611,14 @@ export function UserProfilePage() {
                         <div key={i} className="flex items-center gap-4 px-5 py-4">
                           <div className="shrink-0 text-center w-10">
                             <p className="text-xl font-black text-foreground tabular-nums leading-none">{entry.hours}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">ساعة</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{t('ساعة', 'hrs')}</p>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-sm font-bold text-foreground truncate">{entry.eventTitle}</p>
                               {isVolunteer && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-700 border border-teal-200 shrink-0">
-                                  متطوع
+                                  {t('متطوع', 'Volunteer')}
                                 </span>
                               )}
                             </div>
@@ -692,7 +626,7 @@ export function UserProfilePage() {
                           </div>
                           <div className="shrink-0 text-left">
                             <p className="text-[11px] text-muted-foreground font-mono">
-                              {new Date(entry.recordedAt).toLocaleDateString('ar-SA')}
+                              {new Date(entry.recordedAt).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
                             </p>
                           </div>
                         </div>

@@ -189,7 +189,7 @@ export function LoginPage() {
           {/* Credentials hint */}
           <div className="mt-6 p-4 bg-muted/50 rounded-xl border border-border text-xs text-muted-foreground">
             <p className="font-bold mb-2 text-foreground">بيانات تجريبية:</p>
-            <p>زائر: <span className="font-medium text-foreground">ahmed.ali@imamu.edu.sa</span> / <span className="font-medium text-foreground">student123</span></p>
+            <p>زائر: <span className="font-medium text-foreground">samiya.ali@imamu.edu.sa</span> / <span className="font-medium text-foreground">student123</span></p>
             <p className="mt-1">منظّم: <span className="font-medium text-foreground">sarah.admin@imamu.edu.sa</span> / <span className="font-medium text-foreground">admin123</span></p>
           </div>
 
