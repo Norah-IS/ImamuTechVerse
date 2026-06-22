@@ -205,8 +205,8 @@ export function UserProfilePage() {
                   <Trophy className="w-4 h-4" style={{ color: '#00ADEF' }} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">{t('الفعاليات المكتملة', 'Completed Events')}</p>
-                  <p className="text-sm font-bold text-foreground">{attendedEvents.length} {t('فعالية', 'events')}</p>
+                  <p className="text-xs text-muted-foreground">{t('الأنشطة المكتملة', 'Completed Activities')}</p>
+                  <p className="text-sm font-bold text-foreground">{attendedEvents.length} {t('نشاط', 'activities')}</p>
                 </div>
               </div>
             </div>
@@ -288,7 +288,7 @@ export function UserProfilePage() {
                   {upcomingMyEvents.map(event => {
                     const reg = myRegistrations.find(r => r.eventId === event.id)!;
                     const statusLabel = reg.status === 'waitlist' ? t('انتظار', 'Waitlist')
-                      : reg.status === 'attended' ? t('في الفعالية', 'Attending')
+                      : reg.status === 'attended' ? t('في النشاط', 'Attending')
                       : t('مسجّل', 'Registered');
                     const statusColor = reg.status === 'waitlist'
                       ? 'bg-orange-50 text-orange-600 border-orange-200'
@@ -399,7 +399,7 @@ export function UserProfilePage() {
               <EmptyState
                 icon={Award}
                 message={t('لا توجد شهادات متاحة حتى الآن', 'No certificates yet')}
-                subMessage={t('احضر الفعاليات وقيّمها للحصول على شهادة إتمام', 'Attend and evaluate events to earn completion certificates')}
+                subMessage={t('احضر الأنشطة وقيّمها للحصول على شهادة إتمام', 'Attend and evaluate activities to earn completion certificates')}
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

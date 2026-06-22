@@ -105,7 +105,7 @@ export function OrganizerScannerPage() {
           </button>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-white font-bold text-sm leading-tight">{t('عرض QR الفعالية', 'Event QR Display')}</span>
+              <span className="text-white font-bold text-sm leading-tight">{t('عرض QR النشاط', 'Activity QR Display')}</span>
               <span className="text-white/50 text-[11px]">{t('يمسح الحاضرون الكود بأنفسهم', 'Attendees self-scan this code')}</span>
             </div>
             <LogoGroup uniSize="h-7" projSize="h-9" />
@@ -122,7 +122,7 @@ export function OrganizerScannerPage() {
             {/* Event selector */}
             <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
               <label className="block text-sm font-bold text-foreground mb-2">
-                {t('اختر الفعالية', 'Select Activity')}
+                {t('اختر النشاط', 'Select Activity')}
               </label>
               <select
                 value={selectedEventId}
@@ -130,7 +130,7 @@ export function OrganizerScannerPage() {
                 className="w-full px-4 py-3 bg-muted border-2 border-border rounded-xl text-sm font-medium focus:outline-none focus:border-secondary transition-all appearance-none text-foreground"
               >
                 {upcomingEvents.length === 0 && (
-                  <option value="">{t('لا توجد فعاليات نشطة', 'No active events')}</option>
+                  <option value="">{t('لا توجد أنشطة نشطة', 'No active activities')}</option>
                 )}
                 {upcomingEvents.map(e => (
                   <option key={e.id} value={e.id}>{e.title}</option>
@@ -152,7 +152,7 @@ export function OrganizerScannerPage() {
                 <div>
                   <p className="font-bold text-foreground text-sm">{t('حالة رمز QR', 'QR Code Status')}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {t('فعّل الرمز قبل بدء الفعالية', 'Activate before the event starts')}
+                    {t('فعّل الرمز قبل بدء النشاط', 'Activate before the activity starts')}
                   </p>
                 </div>
                 <button
@@ -212,7 +212,7 @@ export function OrganizerScannerPage() {
               <p className="font-bold text-secondary text-sm mb-3">{t('كيف يعمل النظام', 'How it works')}</p>
               <ol className="space-y-2 text-xs text-foreground">
                 {[
-                  t('فعّل رمز QR هذا قبل بدء الفعالية', 'Activate this QR code before the event starts'),
+                  t('فعّل رمز QR هذا قبل بدء النشاط', 'Activate this QR code before the activity starts'),
                   t('اعرض رمز QR على الشاشة في مدخل القاعة', 'Display the QR code on a screen at the venue entrance'),
                   t('كل حاضر يفتح التطبيق → تفاصيل النشاط → "مسح QR للحضور"', 'Each attendee opens the app → Activity details → "Scan QR to Check In"'),
                   t('النظام يتحقق تلقائياً من الموقع الجغرافي ويسجّل الحضور', 'System auto-verifies GPS location and records attendance'),
@@ -242,7 +242,7 @@ export function OrganizerScannerPage() {
                   <p className="text-white/50 text-xs mt-1">{selectedEvent.date} · {selectedEvent.time}</p>
                 </div>
               ) : (
-                <p className="text-white/40 text-sm">{t('اختر فعالية', 'Select an event')}</p>
+                <p className="text-white/40 text-sm">{t('اختر نشاطاً', 'Select an activity')}</p>
               )}
 
               {/* QR Code */}

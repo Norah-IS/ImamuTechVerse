@@ -6,7 +6,7 @@ export type ActivityType =
   | 'معرض'
   | 'ندوة'
   | 'دورة تدريبية'
-  | 'فعالية ترفيهية';
+  | 'نشاط ترفيهي';
 
 export type AudienceGroup =
   | 'students'
@@ -188,7 +188,7 @@ export const mockUsersDB: User[] = [
     email: 'sarah.admin@imamu.edu.sa',
     password: 'admin123',
     studentId: 'ADMIN001',
-    college: 'إدارة الفعاليات',
+    college: 'إدارة الأنشطة',
     interests: [],
     role: 'admin',
   },
@@ -209,7 +209,7 @@ export const mockUsersDB: User[] = [
     email: 'admin@university.edu.sa',
     password: 'demo123',
     studentId: 'ADMIN001',
-    college: 'إدارة الفعاليات',
+    college: 'إدارة الأنشطة',
     interests: [],
     role: 'admin',
   },
@@ -342,7 +342,7 @@ export const mockEvents: Event[] = [
     time: '17:00 - 19:00',
     location: 'الملعب الرئيسي',
     category: 'رياضي',
-    activityType: 'فعالية ترفيهية',
+    activityType: 'نشاط ترفيهي',
     needsVolunteers: true,
     audienceType: 'general',
     allowedAudience: [],

@@ -94,7 +94,7 @@ const ACTIVITY_TYPES: { value: ActivityType; icon: React.ElementType; color: str
   { value: 'معرض',           icon: LayoutGrid,    color: 'text-green-600',  bg: 'bg-green-50 border-green-200 hover:border-green-400' },
   { value: 'ندوة',           icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200 hover:border-indigo-400' },
   { value: 'دورة تدريبية',   icon: BookOpen,      color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200 hover:border-orange-400' },
-  { value: 'فعالية ترفيهية', icon: Sparkles,      color: 'text-pink-600',   bg: 'bg-pink-50 border-pink-200 hover:border-pink-400' },
+  { value: 'نشاط ترفيهي', icon: Sparkles,      color: 'text-pink-600',   bg: 'bg-pink-50 border-pink-200 hover:border-pink-400' },
 ];
 
 // ─── Blank event template ─────────────────────────────────────────────────────
@@ -281,10 +281,10 @@ export function AdminDashboard() {
       setEmailLogs(getEmailLogs());
       if (issuedCount > 0) {
         alert(
-          `✅ تم إنهاء الفعالية "${eventForm.title}".\n\n🏆 صدرت شهادات الحضور تلقائياً لـ ${issuedCount} طالب:\n${studentNames.map(n => `• ${n}`).join('\n')}\n\nتم إرسال إشعار بريدي وإشعار داخلي لكل طالب.`
+          `✅ تم إنهاء النشاط "${eventForm.title}".\n\n🏆 صدرت شهادات الحضور تلقائياً لـ ${issuedCount} طالب:\n${studentNames.map(n => `• ${n}`).join('\n')}\n\nتم إرسال إشعار بريدي وإشعار داخلي لكل طالب.`
         );
       } else {
-        alert(`✅ تم إنهاء الفعالية "${eventForm.title}". لا يوجد طلاب مسجّلون بحضور لإصدار شهادات لهم.`);
+        alert(`✅ تم إنهاء النشاط "${eventForm.title}". لا يوجد طلاب مسجّلون بحضور لإصدار شهادات لهم.`);
       }
     }
 
@@ -343,7 +343,7 @@ export function AdminDashboard() {
     const scopedAttendees = rows.reduce((s, r) => s + r.attended, 0);
     const overallAttRate  = scopedRegs > 0 ? Math.round((scopedAttendees / scopedRegs) * 100) : 0;
     const reportTitle     = selectedReportEventId && reportEvents[0]
-      ? (isEn ? `Activity Report — ${reportEvents[0].title}` : `تقرير فعالية: ${reportEvents[0].title}`)
+      ? (isEn ? `Activity Report — ${reportEvents[0].title}` : `تقرير نشاط: ${reportEvents[0].title}`)
       : (isEn ? 'Activities Report — Imamu TechVerse' : 'تقرير الأنشطة — Imamu TechVerse');
     const now = new Date().toLocaleDateString(isEn ? 'en-US' : 'ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -471,16 +471,16 @@ export function AdminDashboard() {
                 </div>
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-bold text-white leading-none">{user?.name}</p>
-                  <p className="text-xs text-white/70 mt-1">{t('منظّم الفعاليات', 'Organizer')}</p>
+                  <p className="text-xs text-white/70 mt-1">{t('منظّم الأنشطة', 'Organizer')}</p>
                 </div>
               </div>
               <button
                 onClick={() => navigate('/admin/scan')}
                 className="flex items-center gap-2 px-3 py-2 bg-secondary text-white font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm shadow-md"
-                title={t('عرض QR الفعالية', 'Event QR Display')}
+                title={t('عرض QR النشاط', 'Activity QR Display')}
               >
                 <QrCode className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('عرض QR الفعالية', 'Event QR')}</span>
+                <span className="hidden sm:inline">{t('عرض QR النشاط', 'Activity QR')}</span>
               </button>
               <button
                 onClick={handleLogout}
@@ -630,7 +630,7 @@ export function AdminDashboard() {
                     type="text"
                     value={eventSearch}
                     onChange={e => setEventSearch(e.target.value)}
-                    placeholder="بحث عن فعالية..."
+                    placeholder="بحث عن نشاط..."
                     className="w-full pr-10 pl-4 py-2.5 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary text-sm font-medium"
                   />
                 </div>
@@ -649,7 +649,7 @@ export function AdminDashboard() {
                 <table className="w-full text-sm text-right">
                   <thead className="bg-muted/50 border-b border-border text-muted-foreground">
                     <tr>
-                      <th className="px-6 py-4 font-bold">الفعالية</th>
+                      <th className="px-6 py-4 font-bold">النشاط</th>
                       <th className="px-6 py-4 font-bold">التاريخ والوقت</th>
                       <th className="px-6 py-4 font-bold hidden md:table-cell">المنظم</th>
                       <th className="px-6 py-4 font-bold">التسجيل</th>
@@ -769,7 +769,7 @@ export function AdminDashboard() {
                   <span className="w-3 h-8 bg-green-500 rounded-full block"></span>
                   الحضور والغياب
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">مراقبة الحضور الفعلي لكل فعالية والتحقق من السجلات</p>
+                <p className="text-sm text-muted-foreground mt-1">مراقبة الحضور الفعلي لكل نشاط والتحقق من السجلات</p>
               </div>
               <div className="relative">
                 <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -778,7 +778,7 @@ export function AdminDashboard() {
                   onChange={e => setSelectedEventForAttendance(e.target.value)}
                   className="pr-10 pl-4 py-2.5 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary text-sm font-medium appearance-none min-w-[240px]"
                 >
-                  <option value="">اختر الفعالية</option>
+                  <option value="">اختر النشاط</option>
                   {events.map(e => (
                     <option key={e.id} value={e.id}>{e.title}</option>
                   ))}
@@ -857,7 +857,7 @@ export function AdminDashboard() {
                           {attendanceList.length === 0 ? (
                             <tr>
                               <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-medium">
-                                لا توجد بيانات حضور لهذه الفعالية
+                                لا توجد بيانات حضور لهذا النشاط
                               </td>
                             </tr>
                           ) : attendanceList.map((entry) => {
@@ -951,7 +951,7 @@ export function AdminDashboard() {
                 <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                   <ListChecks className="w-10 h-10 text-muted-foreground/40" />
                 </div>
-                <p className="font-bold text-foreground text-lg mb-1">اختر فعالية لعرض قائمة الحضور</p>
+                <p className="font-bold text-foreground text-lg mb-1">اختر نشاطاً لعرض قائمة الحضور</p>
                 <p className="text-sm text-muted-foreground">ستظهر هنا تفاصيل الحضور والغياب بشكل فوري</p>
               </div>
             )}
@@ -969,9 +969,9 @@ export function AdminDashboard() {
             {/* ── Event selector ── */}
             <div className="bg-card border border-border rounded-2xl p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex-1">
-                <p className="font-bold text-foreground mb-1">{t('اختر الفعالية', 'Select Activity')}</p>
+                <p className="font-bold text-foreground mb-1">{t('اختر النشاط', 'Select Activity')}</p>
                 <p className="text-xs text-muted-foreground">
-                  {t('اختر فعالية محددة لعرض تقريرها، أو اتركها فارغة لتقرير شامل.', 'Pick a specific activity for its report, or leave blank for an overall report.')}
+                  {t('اختر نشاطاً محدداً لعرض تقريره، أو اتركه فارغاً لتقرير شامل.', 'Pick a specific activity for its report, or leave blank for an overall report.')}
                 </p>
               </div>
               <select
@@ -979,7 +979,7 @@ export function AdminDashboard() {
                 onChange={e => setSelectedReportEventId(e.target.value)}
                 className="w-full sm:w-72 px-4 py-2.5 bg-input-background border border-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="">{t('— جميع الفعاليات —', '— All Activities —')}</option>
+                <option value="">{t('— جميع الأنشطة —', '— All Activities —')}</option>
                 {events.map(e => (
                   <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
@@ -997,12 +997,12 @@ export function AdminDashboard() {
                   <div className="flex-1">
                     <h4 className="text-xl font-bold mb-1">
                       {selectedReportEventId
-                        ? (events.find(e => e.id === selectedReportEventId)?.title ?? t('تقرير الفعالية', 'Activity Report'))
+                        ? (events.find(e => e.id === selectedReportEventId)?.title ?? t('تقرير النشاط', 'Activity Report'))
                         : t('تقرير الأنشطة الشامل', 'Full Activities Report')}
                     </h4>
                     <p className="text-white/70 text-sm">
                       {selectedReportEventId
-                        ? t('تقرير مفصّل لهذه الفعالية: التسجيلات، الحضور، معدل الحضور، والتقييمات.', 'Detailed report for this activity: registrations, attendance, rate, and feedback.')
+                        ? t('تقرير مفصّل لهذا النشاط: التسجيلات، الحضور، معدل الحضور، والتقييمات.', 'Detailed report for this activity: registrations, attendance, rate, and feedback.')
                         : t('تقرير شامل لجميع الأنشطة الجامعية.', 'Comprehensive report for all university activities.')}
                     </p>
                   </div>
@@ -1021,7 +1021,7 @@ export function AdminDashboard() {
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                 <h4 className="font-bold text-foreground flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-primary" />
-                  {selectedReportEventId ? t('أداء الفعالية المختارة', 'Selected Activity Performance') : t('ملخص أداء الفعاليات', 'All Activities Performance')}
+                  {selectedReportEventId ? t('أداء النشاط المختار', 'Selected Activity Performance') : t('ملخص أداء الأنشطة', 'All Activities Performance')}
                 </h4>
                 {selectedReportEventId && (
                   <button
@@ -1036,7 +1036,7 @@ export function AdminDashboard() {
                 <table className="w-full text-sm text-right">
                   <thead className="bg-muted/50 border-b border-border text-muted-foreground">
                     <tr>
-                      <th className="px-6 py-3 font-bold">{t('الفعالية', 'Activity')}</th>
+                      <th className="px-6 py-3 font-bold">{t('النشاط', 'Activity')}</th>
                       <th className="px-6 py-3 font-bold">{t('التسجيل', 'Registered')}</th>
                       <th className="px-6 py-3 font-bold">{t('الحضور', 'Attended')}</th>
                       <th className="px-6 py-3 font-bold">{t('التقييمات', 'Feedback')}</th>
@@ -1136,7 +1136,7 @@ export function AdminDashboard() {
                   <Mail className="w-10 h-10 text-muted-foreground/30" />
                 </div>
                 <p className="font-bold text-foreground text-lg mb-1">لا توجد سجلات إشعارات</p>
-                <p className="text-sm text-muted-foreground">ستظهر هنا الرسائل المُرسَلة عند تسجيل الطلاب في الفعاليات</p>
+                <p className="text-sm text-muted-foreground">ستظهر هنا الرسائل المُرسَلة عند تسجيل الطلاب في الأنشطة</p>
               </div>
             ) : (
               <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
@@ -1146,7 +1146,7 @@ export function AdminDashboard() {
                       <tr>
                         <th className="px-6 py-4 font-bold">نوع الإشعار</th>
                         <th className="px-6 py-4 font-bold">المستلم</th>
-                        <th className="px-6 py-4 font-bold">الفعالية</th>
+                        <th className="px-6 py-4 font-bold">النشاط</th>
                         <th className="px-6 py-4 font-bold">وقت الإرسال</th>
                         <th className="px-6 py-4 font-bold">الحالة</th>
                       </tr>
@@ -1421,7 +1421,7 @@ export function AdminDashboard() {
             {/* ── Step 1: Activity Type Selection ── */}
             {!editingEvent && createStep === 1 ? (
               <div className="p-6 overflow-y-auto flex-1">
-                <p className="text-sm text-muted-foreground text-center mb-6">اختر نوع النشاط لتحديد الإعدادات المناسبة للفعالية</p>
+                <p className="text-sm text-muted-foreground text-center mb-6">اختر نوع النشاط لتحديد الإعدادات المناسبة للنشاط</p>
                 <div className="grid grid-cols-2 gap-3">
                   {ACTIVITY_TYPES.map(({ value, icon: Icon, color, bg }) => (
                     <button
@@ -1555,7 +1555,7 @@ export function AdminDashboard() {
                       onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
                       className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
                       rows={3}
-                      placeholder="وصف مفصل عن أهداف ومحتوى الفعالية..."
+                      placeholder="وصف مفصل عن أهداف ومحتوى النشاط..."
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -1647,7 +1647,7 @@ export function AdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-2">رابط صورة الفعالية</label>
+                    <label className="block text-sm font-bold mb-2">رابط صورة النشاط</label>
                     <input
                       type="url"
                       value={eventForm.image}
@@ -1713,8 +1713,8 @@ export function AdminDashboard() {
               <div className="w-14 h-14 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-7 h-7 text-destructive" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-1">حذف الفعالية</h3>
-              <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف هذه الفعالية؟ لا يمكن التراجع عن هذا الإجراء.</p>
+              <h3 className="text-xl font-bold text-foreground mb-1">حذف النشاط</h3>
+              <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف هذا النشاط؟ لا يمكن التراجع عن هذا الإجراء.</p>
             </div>
             <div className="p-6 flex gap-3">
               <button

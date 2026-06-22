@@ -42,7 +42,7 @@ export const HOURS_BY_TYPE: Record<ActivityType, number> = {
   'محاضرة':          2,
   'ندوة':            2,
   'معرض':            2,
-  'فعالية ترفيهية': 1.5,
+  'نشاط ترفيهي': 1.5,
 };
 
 export function getLevelForHours(hours: number): ActivityLevel {

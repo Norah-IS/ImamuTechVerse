@@ -201,7 +201,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
   };
 
   const handleCancelRegistration = () => {
-    if (confirm('هل أنت متأكد من رغبتك في إلغاء التسجيل في هذه الفعالية؟')) {
+    if (confirm('هل أنت متأكد من رغبتك في إلغاء التسجيل في هذا النشاط؟')) {
       setRegistrations(
         registrations.map((r) =>
           r.id === myRegistration?.id ? { ...r, status: 'cancelled' as const } : r
@@ -602,7 +602,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                           </div>
                           <div>
                             <p className="font-bold text-sm">{t('تم تأكيد حضورك ✓', 'Attendance confirmed ✓')}</p>
-                            <p className="text-xs text-green-600/80">{t('لا تنسَ تسجيل المغادرة عند انتهاء الفعالية', "Don't forget to check out when the event ends")}</p>
+                            <p className="text-xs text-green-600/80">{t('لا تنسَ تسجيل المغادرة عند انتهاء النشاط', "Don't forget to check out when the activity ends")}</p>
                           </div>
                         </div>
 
@@ -668,7 +668,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                         className="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
                       >
                         <ChevronRight className="w-5 h-5" />
-                        إدارة الفعالية
+                        إدارة النشاط
                       </button>
                     )}
                   </div>
@@ -728,7 +728,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                   onClick={() => setFeedbackType('event')}
                   className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${feedbackType === 'event' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
                 >
-                  {t('تقييم الفعالية', 'Event Rating')}
+                  {t('تقييم النشاط', 'Activity Rating')}
                 </button>
                 <button
                   onClick={() => setFeedbackType('organizer')}
@@ -741,7 +741,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
               {feedbackType === 'event' && (
                 <div className="space-y-5">
                   <div className="flex flex-col items-center">
-                    <label className="block mb-3 font-bold text-sm text-center">{t('تقييم الفعالية الإجمالي', 'Overall Event Rating')}</label>
+                    <label className="block mb-3 font-bold text-sm text-center">{t('تقييم النشاط الإجمالي', 'Overall Activity Rating')}</label>
                     <div className="flex gap-2 justify-center" dir="ltr">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -807,7 +807,7 @@ export function EventDetailsPage({ adminView = false }: EventDetailsPageProps) {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground text-center bg-muted/50 p-3 rounded-xl">
-                    تقييم المنظمين اختياري. يمكنك الإرسال من تبويب "تقييم الفعالية".
+                    تقييم المنظمين اختياري. يمكنك الإرسال من تبويب "تقييم النشاط".
                   </p>
                 </div>
               )}

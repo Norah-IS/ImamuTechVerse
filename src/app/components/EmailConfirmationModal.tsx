@@ -124,7 +124,7 @@ export function EmailConfirmationModal({
                 <p className="text-sm text-foreground font-medium">عزيزي {recipientName}،</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {isRegistration
-                    ? 'يسعدنا إعلامك بأنه تم تأكيد تسجيلك في الفعالية التالية:'
+                    ? 'يسعدنا إعلامك بأنه تم تأكيد تسجيلك في النشاط التالي:'
                     : 'تمت إضافتك لقائمة الانتظار، وسيتم إرسال إشعار فوري عند توفر مقعد:'}
                 </p>
                 <div className="bg-card rounded-xl p-3 border border-border space-y-2">

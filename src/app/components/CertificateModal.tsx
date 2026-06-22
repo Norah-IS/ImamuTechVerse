@@ -229,7 +229,7 @@ export function CertificateModal({
                 {/* Event info */}
                 <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                   <div style={{ fontSize: '13px', color: '#555', marginBottom: '10px' }}>
-                    وذلك لحضوره وإتمامه بنجاح فعالية
+                    وذلك لحضوره وإتمامه بنجاح نشاط
                   </div>
                   <div
                     style={{

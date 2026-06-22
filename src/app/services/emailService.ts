@@ -164,7 +164,7 @@ export function sendRegistrationConfirmation(params: {
     id: generateId(),
     recipientName: params.recipientName,
     recipientEmail: params.recipientEmail,
-    subject: `✅ تأكيد تسجيلك في فعالية: ${params.eventTitle}`,
+    subject: `✅ تأكيد تسجيلك في نشاط: ${params.eventTitle}`,
     type: 'registration_confirmation',
     eventTitle: params.eventTitle,
     eventDate: params.eventDate,
@@ -178,7 +178,7 @@ export function sendRegistrationConfirmation(params: {
     id: generateId(),
     userId: '', // filled by caller if needed
     title: '✅ تم التسجيل بنجاح',
-    message: `تسجيلك في "${params.eventTitle}" مؤكد. موعد الفعالية: ${params.eventDate}`,
+    message: `تسجيلك في "${params.eventTitle}" مؤكد. موعد النشاط: ${params.eventDate}`,
     type: 'info',
     read: false,
     createdAt: new Date().toISOString(),
@@ -203,7 +203,7 @@ export function sendWaitlistConfirmation(params: {
     eventDate: params.eventDate,
     sentAt: new Date().toISOString(),
     status: 'delivered',
-    body: `عزيزي ${params.recipientName}،\n\nتمت إضافتك لقائمة الانتظار:\n📋 ترتيبك: #${params.waitlistPosition}\n📅 تاريخ الفعالية: ${params.eventDate}\n\nسيتم إرسال إشعار فوري عند توفر مقعد.\n\nمع تحيات فريق Imamu TechVerse`,
+    body: `عزيزي ${params.recipientName}،\n\nتمت إضافتك لقائمة الانتظار:\n📋 ترتيبك: #${params.waitlistPosition}\n📅 تاريخ النشاط: ${params.eventDate}\n\nسيتم إرسال إشعار فوري عند توفر مقعد.\n\nمع تحيات فريق Imamu TechVerse`,
   };
   saveEmailLog(log);
   return log;
@@ -293,21 +293,21 @@ export function sendReminderEmail(params: {
     id: generateId(),
     recipientName: params.recipientName,
     recipientEmail: params.recipientEmail,
-    subject: `⏰ تذكير: فعالية "${params.eventTitle}" غداً`,
+    subject: `⏰ تذكير: نشاط "${params.eventTitle}" غداً`,
     type: 'reminder',
     eventTitle: params.eventTitle,
     eventDate: params.eventDate,
     sentAt: new Date().toISOString(),
     status: 'delivered',
-    body: `عزيزي ${params.recipientName}،\n\nتذكير بأن فعالية "${params.eventTitle}" ستُقام غداً:\n📅 ${params.eventDate}\n⏰ ${params.eventTime}\n📍 ${params.eventLocation}\n\nيرجى الحضور قبل 15 دقيقة من الموعد.\n\nمع تحيات فريق Imamu TechVerse`,
+    body: `عزيزي ${params.recipientName}،\n\nتذكير بأن نشاط "${params.eventTitle}" سيُقام غداً:\n📅 ${params.eventDate}\n⏰ ${params.eventTime}\n📍 ${params.eventLocation}\n\nيرجى الحضور قبل 15 دقيقة من الموعد.\n\nمع تحيات فريق Imamu TechVerse`,
   };
   saveEmailLog(log);
   if (params.userId) {
     saveStudentNotification({
       id: generateId(),
       userId: params.userId,
-      title: '⏰ تذكير بفعالية غداً',
-      message: `فعالية "${params.eventTitle}" ستبدأ غداً في ${params.eventTime} — ${params.eventLocation}`,
+      title: '⏰ تذكير بنشاط غداً',
+      message: `نشاط "${params.eventTitle}" سيبدأ غداً في ${params.eventTime} — ${params.eventLocation}`,
       type: 'reminder',
       read: false,
       createdAt: new Date().toISOString(),
@@ -377,7 +377,7 @@ export function sendAbsenceWarningEmail(params: {
     eventDate: new Date().toISOString().split('T')[0],
     sentAt: new Date().toISOString(),
     status: 'delivered',
-    body: `عزيزي ${params.recipientName}،\n\nنودّ إعلامك بأن عدد غياباتك وصل إلى ${params.absenceCount} غياب.\n⚠️ تبقّى لك ${remaining} غياب(ات) قبل تعليق حسابك لمدة شهر.\n\nفعالية "${params.eventTitle}" سُجّلت ضمن غياباتك.\n\nنرجو الالتزام بالحضور والتواصل مع المنظمين إذا كان هناك عذر.\n\nمع تحيات فريق Imamu TechVerse`,
+    body: `عزيزي ${params.recipientName}،\n\nنودّ إعلامك بأن عدد غياباتك وصل إلى ${params.absenceCount} غياب.\n⚠️ تبقّى لك ${remaining} غياب(ات) قبل تعليق حسابك لمدة شهر.\n\nنشاط "${params.eventTitle}" سُجّل ضمن غياباتك.\n\nنرجو الالتزام بالحضور والتواصل مع المنظمين إذا كان هناك عذر.\n\nمع تحيات فريق Imamu TechVerse`,
   };
   saveEmailLog(log);
 

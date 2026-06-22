@@ -70,7 +70,7 @@ function studentResponse(msg: string, ctx: StudentCtx): string {
   }
 
   // All upcoming events
-  if (has(msg, 'قادم', 'قادمة', 'متاح', 'موجود', 'جميع', 'كل', 'أنشطة', 'انشطة', 'فعاليات', 'ماذا')) {
+  if (has(msg, 'قادم', 'قادمة', 'متاح', 'موجود', 'جميع', 'كل', 'أنشطة', 'انشطة', 'أنشطه', 'نشاط', 'الأنشطة', 'فعاليات', 'فعالية', 'ماذا')) {
     if (upcoming.length === 0) return 'لا توجد أنشطة قادمة حالياً. تابع المنصة لمعرفة الجديد.';
     const list = upcoming
       .slice(0, 4)
@@ -380,7 +380,7 @@ export function AIChatWidget() {
                   {t('مساعد TechVerse', 'TechVerse Assistant')}
                 </p>
                 <p className="text-white/50 text-[10px] mt-0.5">
-                  {isAdmin ? t('تحليل الأنشطة', 'Event Analytics') : t('مساعدك الشخصي', 'Your Personal Guide')}
+                  {isAdmin ? t('تحليل الأنشطة', 'Activity Analytics') : t('مساعدك الشخصي', 'Your Personal Guide')}
                 </p>
               </div>
             </div>

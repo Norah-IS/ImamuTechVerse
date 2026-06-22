@@ -276,7 +276,7 @@ export function CheckInModal({
                 {t('جارٍ التحقق من موقعك الجغرافي', 'Verifying your location...')}
               </p>
               <p className="text-sm text-muted-foreground">
-                {t('نتأكد من أنك داخل نطاق الفعالية', 'Confirming you are within the activity area')}
+                {t('نتأكد من أنك داخل نطاق النشاط', 'Confirming you are within the activity area')}
               </p>
               <div className="flex justify-center gap-1 mt-3">
                 {[0, 1, 2].map((i) => (
@@ -296,7 +296,7 @@ export function CheckInModal({
                 </p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {t(
-                    'تم تسجيل حضورك. لا تنسَ تسجيل المغادرة عند انتهاء الفعالية.',
+                    'تم تسجيل حضورك. لا تنسَ تسجيل المغادرة عند انتهاء النشاط.',
                     'Your attendance is recorded. Remember to check out when the activity ends.'
                   )}
                 </p>
@@ -323,7 +323,7 @@ export function CheckInModal({
                 </p>
                 <p className="text-xs text-amber-600">
                   {t(
-                    'يُفعَّل الباركود تلقائياً خلال وقت الفعالية، أو عند تفعيل المنظّم له.',
+                    'يُفعَّل الباركود تلقائياً خلال وقت النشاط، أو عند تفعيل المنظّم له.',
                     'The QR activates automatically during event time, or when the organizer enables it.'
                   )}
                 </p>
@@ -365,7 +365,7 @@ export function CheckInModal({
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {t(
-                    `يجب أن تكون داخل نطاق الفعالية (${eventLocation}) لتأكيد الحضور.`,
+                    `يجب أن تكون داخل نطاق النشاط (${eventLocation}) لتأكيد الحضور.`,
                     `You must be within the activity area (${eventLocation}) to confirm attendance.`
                   )}
                 </p>

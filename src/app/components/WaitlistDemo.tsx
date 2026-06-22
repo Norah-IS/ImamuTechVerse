@@ -181,7 +181,7 @@ function buildWaitlistSteps(): Step[] {
     {
       id: 1,
       actor: 'student',
-      title: 'الفعالية مكتملة — طالب يُلغي تسجيله',
+      title: 'النشاط مكتمل — طالب يُلغي تسجيله',
       description: 'سارة مسجّلة في الهاكاثون لكنها قررت إلغاء تسجيلها. المقاعد مكتملة (100/100) وهناك 20 طالباً في قائمة الانتظار.',
       leftPanel: (
         <div className="space-y-3">
@@ -362,12 +362,12 @@ function buildBlockSteps(): Step[] {
       id: 2,
       actor: 'admin',
       title: 'المسؤول يُسجّل الغياب الثالث',
-      description: 'انتهت فعالية "ورشة تطوير الويب" وأحمد لم يحضر ولم يُلغِ مسبقاً. يقوم المسؤول بتحديد حالته كـ "غائب".',
+      description: 'انتهى نشاط "ورشة تطوير الويب" وأحمد لم يحضر ولم يُلغِ مسبقاً. يقوم المسؤول بتحديد حالته كـ "غائب".',
       leftPanel: (
         <div className="space-y-3">
           <PanelCard title="لوحة تحكم المسؤول — تسجيل الحضور" icon={<Users size={16} />} color="#5C2D91">
             <div className="space-y-2">
-              <div className="text-xs text-gray-500">فعالية: ورشة تطوير تطبيقات الويب</div>
+              <div className="text-xs text-gray-500">النشاط: ورشة تطوير تطبيقات الويب</div>
               <div className="flex items-center justify-between p-2 rounded bg-gray-50 border text-sm">
                 <span>أحمد محمد العلي</span>
                 <button className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200 font-semibold cursor-default">
@@ -494,13 +494,13 @@ function buildBlockSteps(): Step[] {
             <CheckCircle size={40} className="mx-auto" style={{ color: '#00ADEF' }} />
             <div className="font-bold text-[#1E2652] text-sm">بعد رفع الحجب</div>
             <div className="text-xs text-gray-600 bg-white rounded-lg p-2 border">
-              يستطيع أحمد تسجيل الدخول وتسجيل الفعاليات مجدداً
+              يستطيع أحمد تسجيل الدخول وتسجيل الأنشطة مجدداً
             </div>
           </div>
           <NotificationBubble
             type="success"
             title="✅ تم رفع تعليق حسابك"
-            message="يمكنك الآن تسجيل الدخول والمشاركة في الفعاليات."
+            message="يمكنك الآن تسجيل الدخول والمشاركة في الأنشطة."
           />
         </div>
       ),

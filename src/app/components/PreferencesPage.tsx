@@ -106,7 +106,7 @@ export function PreferencesPage() {
                 مجالات اهتمامك
               </label>
               <p className="text-sm text-muted-foreground mb-6 font-medium">
-                بناءً على اختياراتك، سنقترح لك الفعاليات والدورات الأكثر صلة بمسارك الأكاديمي والمهني (يمكنك اختيار أكثر من مجال).
+                بناءً على اختياراتك، سنقترح لك الأنشطة والدورات الأكثر صلة بمسارك الأكاديمي والمهني (يمكنك اختيار أكثر من مجال).
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {interests.map((interest) => {
