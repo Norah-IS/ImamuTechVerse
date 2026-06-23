@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { LoginPage } from './components/LoginPage';
@@ -157,6 +158,7 @@ export default function App() {
         <AuthProvider>
           <AppRoutes />
           <AIChatWidget />
+          <Analytics />
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>
